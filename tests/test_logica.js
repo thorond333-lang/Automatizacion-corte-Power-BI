@@ -98,6 +98,17 @@ prueba('formatearFila arma las columnas de Concentrado', () => {
   assert.strictEqual(f.G, 'NewLead');
   assert.strictEqual(f.H, 'Ing | Ana | 33 | Single Woman | Línea uno Línea dos');
   assert.strictEqual(f.K, '15550000099');
+  assert.strictEqual(f.L, '🟡');
+});
+
+prueba('columna L: círculo según el perfil', () => {
+  assert.strictEqual(L.circuloDePerfil('LP AZUL AMARILLO'), '🟡');
+  assert.strictEqual(L.circuloDePerfil('LP VERDE AMARILLO'), '🟡');
+  assert.strictEqual(L.circuloDePerfil('LS AZUL BLANCO'), '⚪');
+  assert.strictEqual(L.circuloDePerfil('LS VERDE BLANCO'), '⚪');
+  assert.strictEqual(L.circuloDePerfil('LP AZUL INTERMEDIO'), '🟠');
+  assert.strictEqual(L.circuloDePerfil('LS VERDE INTERMEDIO'), '🟠');
+  assert.strictEqual(L.circuloDePerfil(''), '');
 });
 
 prueba('mapas de sucursal, perfil e idioma', () => {
@@ -111,9 +122,10 @@ prueba('mapas de sucursal, perfil e idioma', () => {
   assert.strictEqual(f({ idiomaRespuesta: 'es', PreguntaAbierta: '' }).H, 'Esp |  |  |  | None');
 });
 
-prueba('filasAMatriz va de B a K', () => {
-  const m = L.filasAMatriz([{ B: 'b', D: 'd', K: 'k' }]);
-  assert.strictEqual(m[0].length, 10);
+prueba('filasAMatriz va de B a L', () => {
+  const m = L.filasAMatriz([{ B: 'b', D: 'd', K: 'k', L: 'l' }]);
+  assert.strictEqual(m[0].length, 11);
+  assert.strictEqual(m[0][10], 'l');
   assert.strictEqual(m[0][0], 'b');
   assert.strictEqual(m[0][2], 'd');
   assert.strictEqual(m[0][9], 'k');

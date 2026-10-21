@@ -1,12 +1,12 @@
 # Formato de Raw y ToConcentrado
 
 Las dos pestañas son una copia de Concentrado (mismos títulos, colores, listas desplegables y casillas,
-tomados de la fila modelo `FILA_MODELO_CONCENTRADO`). La app solo escribe valores en las columnas **B a K**.
+tomados de la fila modelo `FILA_MODELO_CONCENTRADO`). La app solo escribe valores en las columnas **B a L**.
 
 | Columna | Valor | Origen en el Excel |
 |---|---|---|
-| B | *(vacía, pendiente de definir)* | — |
-| C | Fecha (sin hora) | `FechaDealCompleta` |
+| B | *(vacía por ahora: son asignaciones, se definirán después)* | — |
+| C | Fecha de contacto (sin hora), la del Excel | `FechaDealCompleta` |
 | D | Email tal cual | `Email` (columna E) |
 | E | Sucursal: `SCHOU`→Houston, `IOC`→Orange County, `INCOR`→Corporativo, cualquier otra→Internacional | `IdFertilidadSucursal` |
 | F | Perfil: Blue Yellow→LP AZUL AMARILLO, Blue Intermediate→LP AZUL INTERMEDIO, Blue White→LS AZUL BLANCO, Green Yellow→LP VERDE AMARILLO, Green Intermediate→LS VERDE INTERMEDIO, Green White→LS VERDE BLANCO (otro→vacío) | `UnificadoPerfil` |
@@ -14,6 +14,7 @@ tomados de la fila modelo `FILA_MODELO_CONCENTRADO`). La app solo escribe valore
 | H | `Idioma \| Nombre \| Edad \| Perfil de usuario \| Pregunta` (idioma en→Ing, es→Esp; pregunta vacía→None; en una sola línea) | `idiomaRespuesta`, `Firstname`, `edad`, `DescFertilidadUserpersona`, `PreguntaAbierta` |
 | I, J | vacías | — |
 | K | Teléfono, solo dígitos | `Phone` (columna F) |
+| L | Círculo según F: AMARILLO→🟡, BLANCO→⚪, INTERMEDIO→🟠 (F vacía→vacía) | columna F ya calculada |
 
 ## Reglas de comparación y limpieza
 

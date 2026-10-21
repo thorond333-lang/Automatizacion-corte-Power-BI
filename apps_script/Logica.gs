@@ -4,7 +4,7 @@
 
 // Columnas que se llenan en Raw y ToConcentrado (mismas letras que en Concentrado).
 var COLUMNA_INICIAL_SALIDA = 'B';
-var COLUMNA_FINAL_SALIDA = 'K';
+var COLUMNA_FINAL_SALIDA = 'L';
 
 // Columna UnificadoPerfil del Excel -> columna F de Concentrado.
 var MAPA_PERFIL = {
@@ -28,6 +28,20 @@ var SUCURSAL_POR_DEFECTO = 'Internacional';
 var MAPA_IDIOMA = { 'en': 'Ing', 'es': 'Esp' };
 
 var ESTADO_NUEVO = 'NewLead';
+
+// Columna L: círculo según la segunda parte del perfil (columna F).
+var CIRCULOS_PERFIL = [
+  ['AMARILLO', '🟡'],
+  ['BLANCO', '⚪'],
+  ['INTERMEDIO', '🟠']
+];
+
+function circuloDePerfil(perfil) {
+  for (var i = 0; i < CIRCULOS_PERFIL.length; i++) {
+    if (perfil.indexOf(CIRCULOS_PERFIL[i][0]) >= 0) return CIRCULOS_PERFIL[i][1];
+  }
+  return '';
+}
 
 function letraANumero(letra) {
   var n = 0;
@@ -154,7 +168,8 @@ function formatearFila(fila) {
     H: descripcion,
     I: '',
     J: '',
-    K: soloDigitos(d.Phone)
+    K: soloDigitos(d.Phone),
+    L: circuloDePerfil(perfil)
   };
 }
 
@@ -189,6 +204,6 @@ if (typeof module !== 'undefined') {
     letraANumero: letraANumero, claveEmail: claveEmail, claveTelefono: claveTelefono,
     clavesTelefonoDeCelda: clavesTelefonoDeCelda, indiceConcentrado: indiceConcentrado,
     estaEnConcentrado: estaEnConcentrado, prepararFilas: prepararFilas, formatearFila: formatearFila,
-    filasAMatriz: filasAMatriz, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
+    filasAMatriz: filasAMatriz, circuloDePerfil: circuloDePerfil, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
   };
 }
