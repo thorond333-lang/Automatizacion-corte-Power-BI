@@ -1,7 +1,9 @@
 # Automatización corte Power BI: contexto para Claude Code
 
 App web en **Google Apps Script** (ver README.md). El usuario escribe en español; responde en español, simple.
-Se usa una vez al día por varias personas del mismo Google Workspace; cada una tiene su archivo **Corte** propio.
+Se usa una vez al día por varias personas; cada una tiene su archivo **Corte** propio. Se instala en la cuenta
+personal (Gmail) del usuario y se publica para "cualquier usuario con cuenta de Google" (personal o del trabajo),
+ejecutándose como quien la abre: cada cuenta necesita poder ver Document 2.
 
 - **Document 2 = UpdateInConcert**, pestaña **Concentrado**: solo se LEE (columnas D email y K teléfono). Nunca escribir ahí.
   Es el mismo documento del proyecto `thorond333-lang/appointment-manager-repo` (app de escritorio de citas); las reglas de

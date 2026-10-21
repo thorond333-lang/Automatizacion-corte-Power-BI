@@ -1,40 +1,99 @@
-# Instalación (una sola vez, la hace quien administra la app)
+# Instalación (una sola vez, con tu cuenta personal de Google)
 
-## 1. Crear el proyecto
+La app se instala en **tu cuenta personal** (Gmail). Cada persona del equipo la usa con **su propia cuenta**, personal o
+del trabajo: la página corre con la cuenta de quien la abre, su archivo Corte se crea en **su** Drive y lee Concentrado
+con **su** acceso.
 
-1. Entra a <https://script.google.com> → **Nuevo proyecto**. Ponle de nombre *Automatización corte Power BI*.
-2. **Configuración del proyecto** (engrane) → marca **Mostrar el archivo de manifiesto "appsscript.json" en el editor**.
-3. En **Editor**, crea estos archivos y pega el contenido del mismo nombre de la carpeta `apps_script/`:
-   - Secuencias de comandos: `Config`, `Logica`, `Codigo` (borra el `Código.gs` que viene vacío o pega ahí `Codigo`).
-   - HTML: `Index`.
-   - Reemplaza todo `appsscript.json`.
-4. Guarda. En **Servicios** deben aparecer **Drive** y **Sheets** (vienen en el manifiesto; si no aparecen, agrégalos con **+**).
+## Antes de empezar: el acceso a UpdateInConcert
 
-## 2. Revisar `Config`
+La app lee Concentrado con la cuenta de quien la usa, así que **cada cuenta que use la app (empezando por tu cuenta
+personal) debe poder ver UpdateInConcert**. Para probar con tu cuenta personal tienes dos caminos:
 
-- `FILAS_ENCABEZADO`: cuántas filas de títulos tiene Concentrado arriba de los datos (en la captura: **2**).
-- `FILA_MODELO_CONCENTRADO`: la fila cuyo formato se copia (**51414**).
+- **A. Que te den acceso:** pide a quien administra UpdateInConcert que lo comparta como **Lector** con tu cuenta personal.
+- **B. Un documento de prueba:** en tu cuenta personal, crea una hoja con una pestaña **Concentrado** con los mismos
+  títulos y columnas y algunas filas, y pon su ID en `ID_DOCUMENTO_2` (paso 4). El ID es la parte del enlace entre
+  `/d/` y `/edit`.
 
-## 3. Crear la plantilla
+UpdateInConcert tiene datos personales de pacientes. Antes de copiar datos reales a una cuenta personal, confirma que tu
+empresa lo permite.
 
-1. Arriba, elige la función **crearPlantilla** → **Ejecutar**. Acepta los permisos.
-2. Copia la URL que aparece en el **Registro de ejecución**. Se crea "Corte (plantilla) - no editar" en tu Drive con las
-   pestañas Raw y ToConcentrado, con los títulos y el formato de Concentrado y **sin datos**.
-3. Compártela como **Lector** con quienes usarán la app (o con todo el dominio).
+## 1. Crea el proyecto
 
-> Para tomar el formato exacto, la función copia la pestaña Concentrado completa a la plantilla y luego borra todas las filas
-> de datos. El historial de versiones de la plantilla conserva ese momento; las copias de cada usuario no lo traen.
+1. Entra a <https://script.google.com> con tu **cuenta personal**.
+2. Haz clic en **Nuevo proyecto** y ponle de nombre **Automatización corte Power BI**.
 
-## 4. Publicar la página
+## 2. Muestra el manifiesto
 
-1. **Implementar → Nueva implementación** → tipo **App web**.
-2. **Ejecutar como:** *Usuario que accede a la app web*. **Quién tiene acceso:** *Cualquier usuario de tu organización*.
-3. **Implementar** y copia la URL `/exec`. Esa es la página que usa todo el equipo.
+**Engrane** (Configuración del proyecto) → marca **Mostrar el archivo de manifiesto "appsscript.json" en el editor** →
+regresa al editor (**< >**).
 
-Cada persona necesita poder **ver** Document 2 y la plantilla. La primera vez que abre la página, Google le pide permisos,
-y en su primer corte se crea su archivo **Corte** en su Drive.
+## 3. Pega los archivos
 
-## Actualizar la app después de un cambio
+Los archivos están en la carpeta `apps_script/` del repositorio. En GitHub, ábrelos y usa el botón **copiar**.
 
-Pega los archivos nuevos → **Implementar → Administrar implementaciones** → lápiz → **Versión: Nueva versión** → **Implementar**.
-La URL no cambia y todos reciben el cambio.
+| En el editor | Cómo se crea | Contenido |
+|---|---|---|
+| `appsscript.json` | ya existe | `appsscript.json` (reemplaza todo) |
+| `Código.gs` | ya existe | `Codigo.gs` (reemplaza todo) |
+| `Config.gs` | **+** → Secuencia de comandos → `Config` | `Config.gs` |
+| `Logica.gs` | **+** → Secuencia de comandos → `Logica` | `Logica.gs` |
+| `Index.html` | **+** → HTML → `Index` (con I mayúscula) | `Index.html` |
+
+Guarda con **Ctrl + S**. En **Servicios** (barra izquierda) deben aparecer **Drive** y **Sheets**. Si no aparecen, agrégalos con
+**+**: *Drive API* (v3, identificador `Drive`) y *Google Sheets API* (identificador `Sheets`).
+
+## 4. Revisa `Config`
+
+- `ID_DOCUMENTO_2`: deja el de UpdateInConcert (camino A) o pon el de tu documento de prueba (camino B).
+- `FILAS_ENCABEZADO: 2`: los títulos de Concentrado están en la fila 2. Si están solo en la fila 1, pon 1.
+- `FILA_MODELO_CONCENTRADO: 51414`: la fila cuyo formato se copia. En un documento de prueba, pon una fila que exista
+  y tenga el formato correcto (por ejemplo, la 3).
+
+## 5. Crea la plantilla
+
+1. En la lista de funciones (junto a **Ejecutar**) elige **crearPlantilla** → **Ejecutar**.
+2. Permisos: **Revisar permisos** → tu cuenta → si aparece *"Google no verificó esta app"*: **Configuración avanzada** →
+   **Ir a Automatización corte Power BI (no seguro)** → **Permitir**. Sale porque la app es tuya y no está publicada
+   en Google; es normal.
+3. Espera a que termine (puede tardar un par de minutos). Concentrado **no se modifica**, solo se lee.
+4. En el **Registro de ejecución** aparece la URL de la plantilla. Revisa que tenga las pestañas **Raw** y **ToConcentrado**,
+   los títulos, el formato y **ningún dato**.
+5. **Compartir** → en *Acceso general* elige **Cualquier persona que tenga el vínculo** como **Lector**. Así cualquier
+   cuenta (personal o del trabajo) puede hacer su copia. La plantilla no tiene datos.
+
+> Para copiar el formato exacto, la función copia Concentrado completo y luego borra las filas de datos. El historial de
+> versiones de la plantilla conserva ese momento: solo lo ve quien puede **editar** la plantilla (tú), no los lectores.
+
+## 6. Publica la página
+
+1. **Implementar** → **Nueva implementación** → engrane → **Aplicación web**.
+2. **Ejecutar como:** **Usuario que accede a la aplicación web**.
+3. **Quién tiene acceso:** **Cualquier usuario con una Cuenta de Google**.
+4. **Implementar** → copia la **URL de la aplicación web** (termina en `/exec`). Es la página para todo el equipo.
+
+## 7. Prueba tú primero
+
+Abre la URL `/exec` con tu cuenta personal, acepta los permisos, sube el Excel y haz clic en **Ejecutar corte**. Se crea tu
+archivo **Corte** en tu Drive y la página muestra el resumen.
+
+## 8. Dale acceso al equipo
+
+Para cada persona:
+
+1. Que su cuenta (personal o del trabajo) pueda **ver UpdateInConcert** (o el documento de `ID_DOCUMENTO_2`).
+2. Mándale la URL `/exec`. La primera vez verá *"Google no verificó esta app"*: **Configuración avanzada** →
+   **Ir a Automatización corte Power BI (no seguro)** → **Permitir**.
+
+Notas:
+
+- **Si alguien tiene abiertas varias cuentas de Google en el navegador**, la página puede fallar o usar otra cuenta.
+  Que la abra en una ventana de incógnito o en un perfil del navegador con solo la cuenta que va a usar.
+- **Con cuentas del trabajo:** el administrador de la empresa puede bloquear apps no verificadas de fuera de la
+  empresa (*"Acceso bloqueado"*). En ese caso, esa persona usa su cuenta personal o se le pide al administrador
+  que permita la app.
+- Google permite hasta **100 usuarios** en una app no verificada; para un equipo alcanza.
+
+## Si después cambio el código
+
+Pega los archivos nuevos → **Implementar** → **Administrar implementaciones** → lápiz → **Versión: Nueva versión** →
+**Implementar**. La URL no cambia y todos reciben el cambio.
