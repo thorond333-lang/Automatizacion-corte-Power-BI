@@ -97,11 +97,11 @@ prueba('comparación fila por fila: resultado y fila de Concentrado donde se enc
   // Primer valor de las listas = fila 3 de la hoja (2 filas de títulos). 'esta@x.com' sale dos veces: gana la más nueva.
   const r = L.calcularCorte(excel, ['esta@x.com', '', 'esta@x.com'], ['', '5550000020', ''], 3);
   assert.deepStrictEqual(r.comparacion, [
-    [2, 'esta@x.com', '5550000010', 'Ya está (email)', 5, ''],
-    [3, 'nueva@x.com', '5550000020', 'Ya está (teléfono)', '', 4],
-    [4, 'esta@x.com', '5550000099', 'Omitida: duplicada de la fila 2 del Excel', '', ''],
-    [5, '', '', 'Omitida: sin email ni teléfono', '', ''],
-    [6, 'otra@x.com', '5550000030', 'NUEVA -> ToConcentrado', '', '']
+    [2, 'esta@x.com', '5550000010', 'Ya está (email)', 5, '', ''],
+    [3, 'nueva@x.com', '5550000020', 'Ya está (teléfono)', '', 4, ''],
+    [4, 'esta@x.com', '5550000099', 'Omitida: duplicada de la fila 2 del Excel', '', '', ''],
+    [5, '', '', 'Omitida: sin email ni teléfono', '', '', ''],
+    [6, 'otra@x.com', '5550000030', 'NUEVA -> ToConcentrado', '', '', '']
   ]);
   assert.deepStrictEqual(r.toConcentrado.map((f) => f.D), ['otra@x.com']);
 });
@@ -158,6 +158,111 @@ prueba('filasAMatriz va de B a L', () => {
   assert.strictEqual(m[0][0], 'b');
   assert.strictEqual(m[0][2], 'd');
   assert.strictEqual(m[0][9], 'k');
+});
+
+const ASIGNACION = {
+  listas: {
+    Internacional: ['RA2', 'AL2', 'RA2', 'AL2', 'RA2', 'AL2', 'M', 'T:', 'AH:', 'AB:', 'M'],
+    Corporativo: ['AH:', 'E', 'AL2', 'F:', 'E', 'F:'],
+    Branches: ['T:', 'AB:', 'E', 'F:']
+  },
+  grupos: { Internacional: 'Internacional', Corporativo: 'Corporativo', Houston: 'Branches', 'Orange County': 'Branches' }
+};
+const PERFILES = ['LP AZUL AMARILLO', 'LS AZUL BLANCO', 'LP AZUL INTERMEDIO', 'LP VERDE AMARILLO', 'LS VERDE BLANCO', 'LS VERDE INTERMEDIO'];
+
+function contar(lista) {
+  return lista.reduce((a, x) => { a[x] = (a[x] || 0) + 1; return a; }, {});
+}
+
+prueba('pesos: una letra repetida pesa más', () => {
+  assert.deepStrictEqual(L.pesosDeLista(ASIGNACION.listas.Internacional), [
+    { letra: 'RA2', peso: 3 }, { letra: 'AL2', peso: 3 }, { letra: 'M', peso: 2 },
+    { letra: 'T:', peso: 1 }, { letra: 'AH:', peso: 1 }, { letra: 'AB:', peso: 1 }]);
+  assert.deepStrictEqual(L.pesosDeLista([' E ', '', null, 'E']), [{ letra: 'E', peso: 2 }]);
+});
+
+prueba('cupos exactos y proporcionales (22 Internacional = 6/6/4/2/2/2)', () => {
+  const pesos = L.pesosDeLista(ASIGNACION.listas.Internacional);
+  assert.deepStrictEqual(L.repartirCupos(22, pesos), [6, 6, 4, 2, 2, 2]);
+  assert.deepStrictEqual(L.repartirCupos(11, pesos), [3, 3, 2, 1, 1, 1]);
+  // 5 filas en Branches: la de más es para la primera de la lista (se empieza de cero cada corte).
+  assert.deepStrictEqual(L.repartirCupos(5, L.pesosDeLista(ASIGNACION.listas.Branches)), [2, 1, 1, 1]);
+  assert.deepStrictEqual(L.repartirCupos(0, pesos), [0, 0, 0, 0, 0, 0]);
+});
+
+prueba('M recibe el doble que T: y la mezcla de tipos es pareja', () => {
+  // 44 filas Internacional: 4 de cada uno de 11 "tipos" repartidos en orden.
+  const tipos = [];
+  for (let i = 0; i < 44; i++) tipos.push(PERFILES[i % 4]);
+  const letras = L.asignarGrupo(tipos, ASIGNACION.listas.Internacional);
+  const total = contar(letras);
+  assert.deepStrictEqual(total, { RA2: 12, AL2: 12, M: 8, 'T:': 4, 'AH:': 4, 'AB:': 4 });
+  // Cada tipo tiene 11 filas = una vuelta exacta de la lista: 3/3/2/1/1/1 por tipo.
+  PERFILES.slice(0, 4).forEach((p) => {
+    const deEste = contar(letras.filter((l, i) => tipos[i] === p));
+    assert.deepStrictEqual(deEste, { RA2: 3, AL2: 3, M: 2, 'T:': 1, 'AH:': 1, 'AB:': 1 }, p);
+  });
+});
+
+prueba('un tipo escaso no le toca siempre a la misma letra', () => {
+  // Branches: 8 filas, 4 de un tipo común y 4 de uno escaso -> cada letra 1 y 1.
+  const tipos = ['A', 'A', 'B', 'A', 'B', 'A', 'B', 'B'];
+  const letras = L.asignarGrupo(tipos, ASIGNACION.listas.Branches);
+  ['T:', 'AB:', 'E', 'F:'].forEach((l) => {
+    assert.strictEqual(letras.filter((x, i) => x === l && tipos[i] === 'A').length, 1, l);
+    assert.strictEqual(letras.filter((x, i) => x === l && tipos[i] === 'B').length, 1, l);
+  });
+});
+
+prueba('las letras se alternan en el orden del Excel (no quedan todas juntas)', () => {
+  const letras = L.asignarGrupo(new Array(8).fill('A'), ASIGNACION.listas.Branches);
+  assert.deepStrictEqual(letras, ['T:', 'AB:', 'E', 'F:', 'T:', 'AB:', 'E', 'F:']);
+});
+
+prueba('asignarLetras: Houston y Orange County son un solo grupo (Branches)', () => {
+  const filas = [
+    { E: 'Houston', F: 'LP AZUL AMARILLO', L: '🟡' },
+    { E: 'Orange County', F: 'LP AZUL AMARILLO', L: '🟡' },
+    { E: 'Houston', F: 'LP AZUL AMARILLO', L: '🟡' },
+    { E: 'Orange County', F: 'LP AZUL AMARILLO', L: '🟡' },
+    { E: 'Corporativo', F: 'LS AZUL BLANCO', L: '⚪' }
+  ];
+  const r = L.asignarLetras(filas, ASIGNACION);
+  // Una sola fila de Corporativo: le toca a la letra con más peso (E aparece 2 veces), no a la primera.
+  assert.deepStrictEqual(filas.map((f) => f.B), ['T:', 'AB:', 'E', 'F:', 'E']);
+  assert.strictEqual(r.grupos.Branches['T:'].total, 1);
+  assert.deepStrictEqual(r.grupos.Corporativo.E.porCirculo, { '⚪': 1 });
+  assert.strictEqual(r.grupos.Corporativo['AH:'].total, 0);
+  assert.deepStrictEqual(r.sinLista, []);
+});
+
+prueba('mover a alguien de equipo no rompe al otro; lista vacía deja B vacía y avisa', () => {
+  // T: sale de Branches y entra a Corporativo.
+  const config = JSON.parse(JSON.stringify(ASIGNACION));
+  config.listas.Branches = ['AB:', 'E', 'F:'];
+  config.listas.Corporativo.push('T:');
+  const filas = [1, 2, 3, 4, 5, 6].map(() => ({ E: 'Houston', F: 'LP AZUL AMARILLO' }));
+  L.asignarLetras(filas, config);
+  assert.deepStrictEqual(contar(filas.map((f) => f.B)), { 'AB:': 2, E: 2, 'F:': 2 });
+
+  config.listas.Corporativo = [];
+  const corp = [{ E: 'Corporativo', F: '' }, { E: 'Desconocida', F: '' }];
+  const r = L.asignarLetras(corp, config);
+  assert.deepStrictEqual(corp.map((f) => f.B), [undefined, undefined]);
+  assert.deepStrictEqual(r.sinLista.sort(), ['Corporativo (1)', 'Sin grupo (1)']);
+});
+
+prueba('calcularCorte asigna solo en ToConcentrado y lo anota en Comparación', () => {
+  const excel = [
+    TITULOS,
+    fila({ Email: 'esta@x.com', IdFertilidadSucursal: 'SCHOU' }),
+    fila({ Email: 'n1@x.com', IdFertilidadSucursal: 'SCHOU' }),
+    fila({ Email: 'n2@x.com', IdFertilidadSucursal: 'IOC' })
+  ];
+  const r = L.calcularCorte(excel, ['esta@x.com'], [], 3, ASIGNACION);
+  assert.deepStrictEqual(r.raw.map((f) => f.B), ['', '', '']);
+  assert.deepStrictEqual(r.toConcentrado.map((f) => f.B), ['T:', 'AB:']);
+  assert.deepStrictEqual(r.comparacion.map((c) => c[6]), ['', 'T:', 'AB:']);
 });
 
 console.log(`\n${pruebas} pruebas OK`);

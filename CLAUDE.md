@@ -12,4 +12,5 @@ ejecutándose como quien la abre: cada cuenta necesita poder ver Document 2.
 - Lógica pura en `apps_script/Logica.gs` (probar con `node tests/test_logica.js`); llamadas a Google en `Codigo.gs`.
 - Desde el entorno de Claude no hay acceso a Google (docs.google.com/drive bloqueados): lo de `Codigo.gs` no se ha podido
   probar aquí. Decirlo siempre.
-- Formato de salida y supuestos pendientes de confirmar: `docs/FORMATO.md`.
+- Formato de salida, comparación y **asignaciones de la columna B** (reglas del usuario): `docs/FORMATO.md`.
+  Las listas de asignación cambian seguido: viven en `Config.gs` → `ASIGNACION`, una por grupo, independientes.

@@ -203,12 +203,140 @@ function filasAMatriz(filasFormateadas) {
   });
 }
 
+// ---------- Asignaciones (columna B de ToConcentrado) ----------
+// Cada grupo tiene una lista de letras; una letra repetida recibe más filas en esa proporción (2 veces = el doble).
+// Reglas: se empieza de cero en cada corte; cada letra recibe su parte del total (resto: primero a la fracción
+// más grande, empate -> la que aparece antes en la lista) y una mezcla pareja de cada tipo de lead (perfil, columna F);
+// dentro de cada tipo las letras se alternan siguiendo el orden del Excel.
+
+// Lista de letras -> [{letra, peso}] en orden de primera aparición. Ignora vacíos.
+function pesosDeLista(lista) {
+  var pesos = [];
+  var posicion = {};
+  (lista || []).forEach(function (l) {
+    var letra = texto_(l);
+    if (!letra) return;
+    if (!(letra in posicion)) {
+      posicion[letra] = pesos.length;
+      pesos.push({ letra: letra, peso: 0 });
+    }
+    pesos[posicion[letra]].peso++;
+  });
+  return pesos;
+}
+
+// Reparte n filas según los pesos (método del resto mayor). Devuelve un número por letra, en el orden de `pesos`.
+function repartirCupos(n, pesos) {
+  var total = pesos.reduce(function (a, p) { return a + p.peso; }, 0);
+  if (!n || !total) return pesos.map(function () { return 0; });
+  var exactos = pesos.map(function (p) { return n * p.peso / total; });
+  var cupos = exactos.map(Math.floor);
+  var faltan = n - cupos.reduce(function (a, c) { return a + c; }, 0);
+  var orden = exactos.map(function (e, i) { return i; }).sort(function (a, b) {
+    var fa = exactos[a] - cupos[a];
+    var fb = exactos[b] - cupos[b];
+    return fb - fa || a - b;
+  });
+  for (var k = 0; k < faltan; k++) cupos[orden[k]]++;
+  return cupos;
+}
+
+// Asigna letras a las filas de UN grupo. `tipos` = tipo de lead de cada fila (en orden del Excel).
+// Devuelve la letra de cada fila, en el mismo orden.
+function asignarGrupo(tipos, lista) {
+  var pesos = pesosDeLista(lista);
+  var n = tipos.length;
+  if (!n || !pesos.length) return tipos.map(function () { return ''; });
+  var cupos = repartirCupos(n, pesos);
+  var libres = cupos.slice();
+
+  // Filas por tipo; se reparten primero los tipos con menos filas (los más escasos son los que más importa repartir bien).
+  var porTipo = {};
+  var ordenTipos = [];
+  tipos.forEach(function (t, i) {
+    if (!(t in porTipo)) { porTipo[t] = []; ordenTipos.push(t); }
+    porTipo[t].push(i);
+  });
+  ordenTipos.sort(function (a, b) { return porTipo[a].length - porTipo[b].length || ordenTipos.indexOf(a) - ordenTipos.indexOf(b); });
+
+  var resultado = new Array(n);
+  ordenTipos.forEach(function (t) {
+    var filas = porTipo[t];
+    // Cuántas de este tipo le tocan a cada letra: lo más cerca posible de su parte proporcional.
+    var ideal = cupos.map(function (c) { return filas.length * c / n; });
+    var cuantas = cupos.map(function () { return 0; });
+    for (var k = 0; k < filas.length; k++) {
+      var mejor = -1;
+      for (var i = 0; i < pesos.length; i++) {
+        if (!libres[i]) continue;
+        if (mejor < 0) { mejor = i; continue; }
+        var di = ideal[i] - cuantas[i];
+        var dm = ideal[mejor] - cuantas[mejor];
+        if (di > dm + 1e-9 || (Math.abs(di - dm) <= 1e-9 && libres[i] / cupos[i] > libres[mejor] / cupos[mejor] + 1e-9)) {
+          mejor = i;
+        }
+      }
+      cuantas[mejor]++;
+      libres[mejor]--;
+    }
+    // Orden dentro del tipo: round robin ponderado suave, para que las letras se alternen.
+    var acumulado = cuantas.map(function () { return 0; });
+    filas.forEach(function (fila) {
+      var elegido = -1;
+      for (var i = 0; i < pesos.length; i++) {
+        if (!cuantas[i]) continue;
+        acumulado[i] += cuantas[i];
+        if (elegido < 0 || acumulado[i] > acumulado[elegido]) elegido = i;
+      }
+      acumulado[elegido] -= filas.length;
+      resultado[fila] = pesos[elegido].letra;
+    });
+  });
+  return resultado;
+}
+
+// Pone la letra en la columna B de cada fila formateada. `asignacion` = {listas: {grupo: [letras]},
+// grupos: {sucursal (columna E): grupo}}. Una fila sin grupo o sin lista queda con B vacía.
+// Devuelve el resumen: {grupo: {letra: {total, porCirculo: {círculo: n}}}} y los grupos sin lista.
+function asignarLetras(filasFormateadas, asignacion) {
+  var listas = (asignacion && asignacion.listas) || {};
+  var grupos = (asignacion && asignacion.grupos) || {};
+  var porGrupo = {};
+  filasFormateadas.forEach(function (f, i) {
+    var grupo = grupos[f.E] || '';
+    if (!(grupo in porGrupo)) porGrupo[grupo] = [];
+    porGrupo[grupo].push(i);
+  });
+  var resumen = { grupos: {}, sinLista: [] };
+  Object.keys(porGrupo).forEach(function (grupo) {
+    var indices = porGrupo[grupo];
+    if (!grupo || !pesosDeLista(listas[grupo]).length) {
+      resumen.sinLista.push((grupo || 'Sin grupo') + ' (' + indices.length + ')');
+      return;
+    }
+    var letras = asignarGrupo(indices.map(function (i) { return filasFormateadas[i].F; }), listas[grupo]);
+    var conteo = {};
+    pesosDeLista(listas[grupo]).forEach(function (p) { conteo[p.letra] = { total: 0, porCirculo: {} }; });
+    indices.forEach(function (i, k) {
+      var f = filasFormateadas[i];
+      f.B = letras[k];
+      var c = conteo[letras[k]];
+      c.total++;
+      var circulo = f.L || 'sin perfil';
+      c.porCirculo[circulo] = (c.porCirculo[circulo] || 0) + 1;
+    });
+    resumen.grupos[grupo] = conteo;
+  });
+  return resumen;
+}
+
 var TITULOS_COMPARACION = ['Fila del Excel', 'Email (comparado)', 'Teléfono (últimos 10)', 'Resultado',
-  'Fila en Concentrado (email)', 'Fila en Concentrado (teléfono)'];
+  'Fila en Concentrado (email)', 'Fila en Concentrado (teléfono)', 'Asignado (B)'];
 
 // Todo el corte sin Google: valores del Excel + columnas D y K de Concentrado -> lo que va a cada pestaña.
 // `primeraFilaConcentrado` = fila de la hoja del primer valor de esas columnas (para mostrar dónde se encontró).
-function calcularCorte(valoresExcel, emailsConcentrado, telefonosConcentrado, primeraFilaConcentrado) {
+// `asignacion` = listas de letras y grupos (ver asignarLetras); solo se aplica a ToConcentrado.
+function calcularCorte(valoresExcel, emailsConcentrado, telefonosConcentrado, primeraFilaConcentrado, asignacion) {
   var preparado = prepararFilas(valoresExcel);
   var indice = indiceConcentrado(emailsConcentrado, telefonosConcentrado, primeraFilaConcentrado);
   var nuevas = [];
@@ -223,15 +351,23 @@ function calcularCorte(valoresExcel, emailsConcentrado, telefonosConcentrado, pr
       resultado = 'NUEVA -> ToConcentrado';
       nuevas.push(f);
     }
-    comparacion.push([f.filaExcel, f.claveEmail, f.claveTelefono, resultado, b.filaEmail || '', b.filaTelefono || '']);
+    comparacion.push([f.filaExcel, f.claveEmail, f.claveTelefono, resultado, b.filaEmail || '', b.filaTelefono || '', '']);
   });
   preparado.omitidas.forEach(function (o) {
-    comparacion.push([o.filaExcel, o.claveEmail, o.claveTelefono, o.motivo, '', '']);
+    comparacion.push([o.filaExcel, o.claveEmail, o.claveTelefono, o.motivo, '', '', '']);
   });
   comparacion.sort(function (a, b) { return a[0] - b[0]; });
+
+  var toConcentrado = nuevas.map(formatearFila);
+  var asignaciones = asignarLetras(toConcentrado, asignacion);
+  var filaComparacion = {};
+  comparacion.forEach(function (c) { filaComparacion[c[0]] = c; });
+  nuevas.forEach(function (f, i) { filaComparacion[f.filaExcel][6] = toConcentrado[i].B; });
+
   return {
     raw: preparado.filas.map(formatearFila),
-    toConcentrado: nuevas.map(formatearFila),
+    toConcentrado: toConcentrado,
+    asignaciones: asignaciones,
     comparacion: comparacion,
     totalExcel: preparado.totalExcel,
     omitidasVacias: preparado.omitidasVacias,
@@ -245,6 +381,7 @@ if (typeof module !== 'undefined') {
     letraANumero: letraANumero, claveEmail: claveEmail, claveTelefono: claveTelefono,
     clavesTelefonoDeCelda: clavesTelefonoDeCelda, indiceConcentrado: indiceConcentrado,
     estaEnConcentrado: estaEnConcentrado, buscarEnConcentrado: buscarEnConcentrado, prepararFilas: prepararFilas, formatearFila: formatearFila,
-    filasAMatriz: filasAMatriz, circuloDePerfil: circuloDePerfil, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
+    filasAMatriz: filasAMatriz, circuloDePerfil: circuloDePerfil,
+    pesosDeLista: pesosDeLista, repartirCupos: repartirCupos, asignarGrupo: asignarGrupo, asignarLetras: asignarLetras, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
   };
 }

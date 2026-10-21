@@ -16,6 +16,8 @@
     main { max-width: 560px; margin: 0 auto; background: var(--tarjeta); border: 1px solid var(--borde);
            border-radius: 12px; padding: 24px; }
     h1 { font-size: 20px; margin: 0 0 4px; }
+    h2 { font-size: 15px; margin: 20px 0 0; }
+    .asignaciones td:nth-child(2) { color: var(--suave); font-size: 13px; }
     .suave { color: var(--suave); font-size: 13px; }
     label { display: block; margin: 20px 0 8px; font-weight: 600; }
     input[type=file] { width: 100%; }
@@ -63,6 +65,34 @@
     var a = document.createElement('a');
     a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = texto;
     return a;
+  }
+
+  // Cuántas filas recibió cada letra de cada grupo, con su mezcla de círculos (columna L).
+  function mostrarAsignaciones(a) {
+    if (!a) return;
+    Object.keys(a.grupos).forEach(function (grupo) {
+      var titulo = document.createElement('h2');
+      titulo.textContent = 'Asignaciones · ' + grupo;
+      resultado.appendChild(titulo);
+      var tabla = document.createElement('table');
+      tabla.className = 'asignaciones';
+      Object.keys(a.grupos[grupo]).forEach(function (letra) {
+        var c = a.grupos[grupo][letra];
+        var mezcla = Object.keys(c.porCirculo).map(function (k) { return k + ' ' + c.porCirculo[k]; }).join('  ');
+        var tr = tabla.insertRow();
+        tr.insertCell().textContent = letra;
+        tr.insertCell().textContent = mezcla;
+        tr.insertCell().textContent = c.total;
+      });
+      resultado.appendChild(tabla);
+    });
+    if (a.sinLista.length) {
+      var aviso = document.createElement('div');
+      aviso.className = 'error';
+      aviso.textContent = 'Sin lista de asignación (columna B vacía): ' + a.sinLista.join(', ') +
+        '. Revisa ASIGNACION en Config.';
+      resultado.appendChild(aviso);
+    }
   }
 
   function mostrarError(err) {
@@ -115,6 +145,7 @@
             tr.insertCell().textContent = f[1];
           });
           resultado.appendChild(tabla);
+          mostrarAsignaciones(r.asignaciones);
           var detalle = document.createElement('div');
           detalle.className = 'suave';
           detalle.textContent = 'Excel ' + r.tiempos.excel + ' s · Concentrado (' + r.filasConcentrado +

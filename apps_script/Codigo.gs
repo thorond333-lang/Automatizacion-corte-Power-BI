@@ -40,7 +40,8 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
     tiempos.concentrado = segundosDesde_(marca);
     marca = Date.now();
 
-    var corte = calcularCorte(valoresExcel, concentrado.emails, concentrado.telefonos, CONFIG.FILAS_ENCABEZADO + 1);
+    var corte = calcularCorte(valoresExcel, concentrado.emails, concentrado.telefonos, CONFIG.FILAS_ENCABEZADO + 1,
+      CONFIG.ASIGNACION);
 
     var archivo = abrirCorteDelUsuario_(true);
     escribirPestana_(archivo, CONFIG.PESTANA_RAW, filasAMatriz(corte.raw));
@@ -57,6 +58,7 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
       enRaw: corte.raw.length,
       yaEnConcentrado: corte.yaEnConcentrado,
       aToConcentrado: corte.toConcentrado.length,
+      asignaciones: corte.asignaciones,
       filasConcentrado: concentrado.filas,
       tiempos: tiempos,
       segundos: segundosDesde_(inicio),
