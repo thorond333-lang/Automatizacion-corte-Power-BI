@@ -24,3 +24,8 @@ logs/
 Thumbs.db
 .vscode/
 .idea/
+
+# Datos (traen datos personales: nunca se suben)
+*.xlsx
+*.xls
+*.csv

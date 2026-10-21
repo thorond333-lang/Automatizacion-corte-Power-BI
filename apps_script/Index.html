@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    :root { --fondo: #f6f7f9; --tarjeta: #fff; --texto: #1f2328; --suave: #59636e; --borde: #d1d9e0;
+            --acento: #1a73e8; --ok: #1e7e34; --error: #b3261e; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fondo: #15181c; --tarjeta: #1f2328; --texto: #e6e8eb; --suave: #9aa4ae; --borde: #3a424b;
+              --acento: #8ab4f8; --ok: #7ee2a0; --error: #f2b8b5; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px 16px; background: var(--fondo); color: var(--texto);
+           font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 560px; margin: 0 auto; background: var(--tarjeta); border: 1px solid var(--borde);
+           border-radius: 12px; padding: 24px; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .suave { color: var(--suave); font-size: 13px; }
+    label { display: block; margin: 20px 0 8px; font-weight: 600; }
+    input[type=file] { width: 100%; }
+    button { margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: 8px; font-size: 15px;
+             font-weight: 600; background: var(--acento); color: #fff; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: default; }
+    #estado { margin-top: 16px; min-height: 1.5em; }
+    .error { color: var(--error); }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    td { padding: 6px 0; border-bottom: 1px solid var(--borde); }
+    td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+    a { color: var(--acento); }
+    .enlaces a { display: inline-block; margin: 12px 16px 0 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Corte Power BI</h1>
+  <div class="suave" id="usuario">Cargando…</div>
+
+  <label for="excel">Excel del día</label>
+  <input type="file" id="excel" accept=".xlsx,.xls">
+
+  <button id="ejecutar" disabled>Ejecutar corte</button>
+  <div id="estado"></div>
+  <div id="resultado"></div>
+  <div class="enlaces" id="enlaces"></div>
+</main>
+
+<script>
+  var boton = document.getElementById('ejecutar');
+  var entrada = document.getElementById('excel');
+  var estado = document.getElementById('estado');
+  var resultado = document.getElementById('resultado');
+  var enlaces = document.getElementById('enlaces');
+
+  function mostrarEnlaces(urlCorte, urlTo) {
+    enlaces.innerHTML = '';
+    if (urlTo) enlaces.appendChild(enlace(urlTo, 'Abrir ToConcentrado'));
+    if (urlCorte) enlaces.appendChild(enlace(urlCorte, 'Abrir mi archivo Corte'));
+  }
+
+  function enlace(url, texto) {
+    var a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = texto;
+    return a;
+  }
+
+  function mostrarError(err) {
+    estado.className = 'error';
+    estado.textContent = (err && err.message) || String(err);
+    boton.disabled = !entrada.files.length;
+  }
+
+  google.script.run
+    .withSuccessHandler(function (e) {
+      document.getElementById('usuario').textContent = 'Sesión: ' + e.usuario +
+        (e.urlCorte ? '' : ' · La primera vez se creará tu archivo Corte en tu Drive.');
+      if (!e.plantillaLista) mostrarError('La app todavía no tiene plantilla (falta ejecutar crearPlantilla).');
+      mostrarEnlaces(e.urlCorte, '');
+    })
+    .withFailureHandler(mostrarError)
+    .obtenerEstado();
+
+  entrada.addEventListener('change', function () {
+    boton.disabled = !entrada.files.length;
+    estado.textContent = ''; estado.className = ''; resultado.innerHTML = '';
+  });
+
+  boton.addEventListener('click', function () {
+    var archivo = entrada.files[0];
+    if (!archivo) return;
+    boton.disabled = true;
+    estado.className = '';
+    estado.textContent = 'Procesando ' + archivo.name + '… (lee el Excel, compara con Concentrado y llena Raw y ToConcentrado)';
+    resultado.innerHTML = '';
+    var lector = new FileReader();
+    lector.onload = function () {
+      var base64 = String(lector.result).split(',')[1];
+      google.script.run
+        .withSuccessHandler(function (r) {
+          estado.className = '';
+          estado.textContent = 'Listo en ' + r.segundos + ' s.';
+          var filas = [
+            ['Filas en el Excel', r.totalExcel],
+            ['Sin email ni teléfono (omitidas)', r.omitidasVacias],
+            ['Duplicadas en el Excel (omitidas)', r.omitidasDuplicadas],
+            ['Escritas en Raw', r.enRaw],
+            ['Ya estaban en Concentrado', r.yaEnConcentrado],
+            ['Escritas en ToConcentrado', r.aToConcentrado]
+          ];
+          var tabla = document.createElement('table');
+          filas.forEach(function (f) {
+            var tr = tabla.insertRow();
+            tr.insertCell().textContent = f[0];
+            tr.insertCell().textContent = f[1];
+          });
+          resultado.appendChild(tabla);
+          var detalle = document.createElement('div');
+          detalle.className = 'suave';
+          detalle.textContent = 'Excel ' + r.tiempos.excel + ' s · Concentrado (' + r.filasConcentrado +
+            ' filas) ' + r.tiempos.concentrado + ' s · escritura ' + r.tiempos.escritura + ' s';
+          resultado.appendChild(detalle);
+          mostrarEnlaces(r.urlCorte, r.urlToConcentrado);
+          boton.disabled = false;
+        })
+        .withFailureHandler(mostrarError)
+        .ejecutarCorte(base64, archivo.name, archivo.type);
+    };
+    lector.onerror = function () { mostrarError('No se pudo leer el archivo.'); };
+    lector.readAsDataURL(archivo);
+  });
+</script>
+</body>
+</html>
