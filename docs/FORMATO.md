@@ -75,3 +75,4 @@ Un archivo **ToRawDaniNew** en el Drive de cada usuario (uno solo; se reemplaza 
 **copia exacta** de la hoja del Excel cargado (valores y formato) **sin la fila de títulos**, sin filas vacías y sin columnas
 vacías al final. Las columnas vacías de en medio (por ejemplo `DescFertilidadMotivo`) **se quedan**, para que cada dato siga
 en la misma columna que en el Excel.
+El botón **ToRawDaniNew** de la página abre el archivo con todas las celdas con datos ya seleccionadas, listas para copiar.

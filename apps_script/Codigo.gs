@@ -19,7 +19,7 @@ function obtenerEstado() {
   return {
     usuario: Session.getActiveUser().getEmail(),
     urlCorte: corte ? corte.getUrl() : '',
-    urlToRaw: toRaw ? toRaw.getUrl() : '',
+    urlToRaw: toRaw ? urlToRaw_(toRaw) : '',
     plantillaLista: !!idPlantilla_()
   };
 }
@@ -81,7 +81,7 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
       urlCorte: archivo.getUrl(),
       // &range= abre la hoja con las celdas de datos (B a L) ya seleccionadas, listas para copiar.
       urlToConcentrado: archivo.getUrl() + '#gid=' + hojaTo.getSheetId() + (rangoTo ? '&range=' + rangoTo : ''),
-      urlToRaw: toRaw.getUrl(),
+      urlToRaw: urlToRaw_(toRaw),
       urlComparacion: archivo.getUrl() + '#gid=' + hojaComparacion.getSheetId()
     };
     anotarBitacora_(archivo, resumen);
@@ -141,6 +141,13 @@ function escribirToRawDaniNew_(hojaExcel, valores) {
     hoja.deleteColumns(limpieza.ultimaColumna + 1, maxColumnas - limpieza.ultimaColumna);
   }
   return archivo;
+}
+
+// Enlace a ToRawDaniNew que lo abre con todas las celdas con datos ya seleccionadas, listas para copiar.
+function urlToRaw_(archivo) {
+  var hoja = archivo.getSheets()[0];
+  if (!hoja.getLastRow()) return archivo.getUrl();
+  return archivo.getUrl() + '#gid=' + hoja.getSheetId() + '&range=' + hoja.getDataRange().getA1Notation();
 }
 
 // Un archivo guardado en las propiedades del usuario, o null si no tiene, lo borró o ya no tiene acceso.
