@@ -1,0 +1,26 @@
+# Entornos y secretos
+.env
+.env.*
+*.key
+credentials*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Power BI / Office
+*.pbix.bak
+~$*
+
+# Salidas generadas
+output/
+logs/
+*.log
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
