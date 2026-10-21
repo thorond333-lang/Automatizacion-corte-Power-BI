@@ -85,6 +85,27 @@ prueba('comparación O: basta email o teléfono', () => {
   assert.deepStrictEqual(r.toConcentrado.map((f) => f.K), ['15550000030', '15550000040']);
 });
 
+prueba('comparación fila por fila: resultado y fila de Concentrado donde se encontró', () => {
+  const excel = [
+    TITULOS,
+    fila({ Email: 'esta@x.com', Phone: '+15550000010' }),       // fila 2 del Excel
+    fila({ Email: 'nueva@x.com', Phone: '+15550000020' }),      // fila 3: teléfono en Concentrado
+    fila({ Email: 'ESTA@x.com', Phone: '+15550000099' }),       // fila 4: duplicada de la 2
+    fila({ Firstname: 'Sin datos' }),                           // fila 5: sin email ni teléfono
+    fila({ Email: 'otra@x.com', Phone: '+15550000030' })        // fila 6: nueva
+  ];
+  // Primer valor de las listas = fila 3 de la hoja (2 filas de títulos). 'esta@x.com' sale dos veces: gana la más nueva.
+  const r = L.calcularCorte(excel, ['esta@x.com', '', 'esta@x.com'], ['', '5550000020', ''], 3);
+  assert.deepStrictEqual(r.comparacion, [
+    [2, 'esta@x.com', '5550000010', 'Ya está (email)', 5, ''],
+    [3, 'nueva@x.com', '5550000020', 'Ya está (teléfono)', '', 4],
+    [4, 'esta@x.com', '5550000099', 'Omitida: duplicada de la fila 2 del Excel', '', ''],
+    [5, '', '', 'Omitida: sin email ni teléfono', '', ''],
+    [6, 'otra@x.com', '5550000030', 'NUEVA -> ToConcentrado', '', '']
+  ]);
+  assert.deepStrictEqual(r.toConcentrado.map((f) => f.D), ['otra@x.com']);
+});
+
 prueba('formatearFila arma las columnas de Concentrado', () => {
   const r = L.prepararFilas([TITULOS, fila({
     FechaDealCompleta: new Date(2026, 9, 19, 14, 30), Firstname: 'Ana', Email: ' ana@x.com ',

@@ -82,23 +82,33 @@ function clavesTelefonoDeCelda(valor) {
   return claves.filter(function (c) { return c; });
 }
 
-// Emails y teléfonos de Concentrado (columnas D y K, cualquier largo) -> índice para buscar al instante.
-function indiceConcentrado(emails, telefonos) {
-  var indice = { emails: new Set(), telefonos: new Set() };
-  (emails || []).forEach(function (v) {
+// Emails y teléfonos de Concentrado (columnas D y K) -> índice {clave: fila de la hoja} para buscar al instante.
+// `primeraFila` = fila de la hoja del primer valor de las listas. Si se repite, gana la fila más nueva (la de más abajo).
+function indiceConcentrado(emails, telefonos, primeraFila) {
+  var inicio = primeraFila || 1;
+  var indice = { emails: new Map(), telefonos: new Map() };
+  (emails || []).forEach(function (v, i) {
     var c = claveEmail(v);
-    if (c) indice.emails.add(c);
+    if (c) indice.emails.set(c, inicio + i);
   });
-  (telefonos || []).forEach(function (v) {
-    clavesTelefonoDeCelda(v).forEach(function (c) { indice.telefonos.add(c); });
+  (telefonos || []).forEach(function (v, i) {
+    clavesTelefonoDeCelda(v).forEach(function (c) { indice.telefonos.set(c, inicio + i); });
   });
   return indice;
 }
 
+// En qué fila de Concentrado está el email y en cuál el teléfono (0 = no está).
+function buscarEnConcentrado(fila, indice) {
+  return {
+    filaEmail: (fila.claveEmail && indice.emails.get(fila.claveEmail)) || 0,
+    filaTelefono: (fila.claveTelefono && indice.telefonos.get(fila.claveTelefono)) || 0
+  };
+}
+
 // Una fila "ya está" en Concentrado si coincide el email O el teléfono.
 function estaEnConcentrado(fila, indice) {
-  return (fila.claveEmail && indice.emails.has(fila.claveEmail)) ||
-    (fila.claveTelefono && indice.telefonos.has(fila.claveTelefono));
+  var b = buscarEnConcentrado(fila, indice);
+  return !!(b.filaEmail || b.filaTelefono);
 }
 
 // Valores del Excel (fila 1 = títulos) -> filas como objetos {título: valor}, sin filas vacías ni duplicadas.
@@ -110,27 +120,33 @@ function prepararFilas(valores) {
   if (iEmail < 0) iEmail = letraANumero('E') - 1;
   if (iTelefono < 0) iTelefono = letraANumero('F') - 1;
 
-  var resultado = { filas: [], totalExcel: 0, omitidasVacias: 0, omitidasDuplicadas: 0 };
-  var emailsVistos = new Set();
-  var telefonosVistos = new Set();
+  var resultado = { filas: [], omitidas: [], totalExcel: 0, omitidasVacias: 0, omitidasDuplicadas: 0 };
+  var emailsVistos = new Map();     // clave -> fila del Excel donde apareció primero
+  var telefonosVistos = new Map();
   for (var r = 1; r < valores.length; r++) {
     var crudo = valores[r];
     if (!crudo || crudo.every(function (v) { return texto_(v) === ''; })) continue;
     resultado.totalExcel++;
     var email = claveEmail(crudo[iEmail]);
     var telefono = claveTelefono(crudo[iTelefono]);
+    var filaExcel = r + 1;
     if (!email && !telefono) {
       resultado.omitidasVacias++;
+      resultado.omitidas.push({ filaExcel: filaExcel, claveEmail: '', claveTelefono: '',
+        motivo: 'Omitida: sin email ni teléfono' });
       continue;
     }
-    if ((email && emailsVistos.has(email)) || (telefono && telefonosVistos.has(telefono))) {
+    var primera = (email && emailsVistos.get(email)) || (telefono && telefonosVistos.get(telefono));
+    if (primera) {
       resultado.omitidasDuplicadas++;
+      resultado.omitidas.push({ filaExcel: filaExcel, claveEmail: email, claveTelefono: telefono,
+        motivo: 'Omitida: duplicada de la fila ' + primera + ' del Excel' });
       continue;
     }
-    if (email) emailsVistos.add(email);
-    if (telefono) telefonosVistos.add(telefono);
+    if (email) emailsVistos.set(email, filaExcel);
+    if (telefono && !telefonosVistos.has(telefono)) telefonosVistos.set(telefono, filaExcel);
 
-    var fila = { claveEmail: email, claveTelefono: telefono, datos: {} };
+    var fila = { filaExcel: filaExcel, claveEmail: email, claveTelefono: telefono, datos: {} };
     titulos.forEach(function (t, i) { if (t) fila.datos[t] = crudo[i]; });
     fila.datos.Email = crudo[iEmail];
     fila.datos.Phone = crudo[iTelefono];
@@ -187,14 +203,36 @@ function filasAMatriz(filasFormateadas) {
   });
 }
 
+var TITULOS_COMPARACION = ['Fila del Excel', 'Email (comparado)', 'Teléfono (últimos 10)', 'Resultado',
+  'Fila en Concentrado (email)', 'Fila en Concentrado (teléfono)'];
+
 // Todo el corte sin Google: valores del Excel + columnas D y K de Concentrado -> lo que va a cada pestaña.
-function calcularCorte(valoresExcel, emailsConcentrado, telefonosConcentrado) {
+// `primeraFilaConcentrado` = fila de la hoja del primer valor de esas columnas (para mostrar dónde se encontró).
+function calcularCorte(valoresExcel, emailsConcentrado, telefonosConcentrado, primeraFilaConcentrado) {
   var preparado = prepararFilas(valoresExcel);
-  var indice = indiceConcentrado(emailsConcentrado, telefonosConcentrado);
-  var nuevas = preparado.filas.filter(function (f) { return !estaEnConcentrado(f, indice); });
+  var indice = indiceConcentrado(emailsConcentrado, telefonosConcentrado, primeraFilaConcentrado);
+  var nuevas = [];
+  var comparacion = [];
+  preparado.filas.forEach(function (f) {
+    var b = buscarEnConcentrado(f, indice);
+    var resultado;
+    if (b.filaEmail && b.filaTelefono) resultado = 'Ya está (email y teléfono)';
+    else if (b.filaEmail) resultado = 'Ya está (email)';
+    else if (b.filaTelefono) resultado = 'Ya está (teléfono)';
+    else {
+      resultado = 'NUEVA -> ToConcentrado';
+      nuevas.push(f);
+    }
+    comparacion.push([f.filaExcel, f.claveEmail, f.claveTelefono, resultado, b.filaEmail || '', b.filaTelefono || '']);
+  });
+  preparado.omitidas.forEach(function (o) {
+    comparacion.push([o.filaExcel, o.claveEmail, o.claveTelefono, o.motivo, '', '']);
+  });
+  comparacion.sort(function (a, b) { return a[0] - b[0]; });
   return {
     raw: preparado.filas.map(formatearFila),
     toConcentrado: nuevas.map(formatearFila),
+    comparacion: comparacion,
     totalExcel: preparado.totalExcel,
     omitidasVacias: preparado.omitidasVacias,
     omitidasDuplicadas: preparado.omitidasDuplicadas,
@@ -206,7 +244,7 @@ if (typeof module !== 'undefined') {
   module.exports = {
     letraANumero: letraANumero, claveEmail: claveEmail, claveTelefono: claveTelefono,
     clavesTelefonoDeCelda: clavesTelefonoDeCelda, indiceConcentrado: indiceConcentrado,
-    estaEnConcentrado: estaEnConcentrado, prepararFilas: prepararFilas, formatearFila: formatearFila,
+    estaEnConcentrado: estaEnConcentrado, buscarEnConcentrado: buscarEnConcentrado, prepararFilas: prepararFilas, formatearFila: formatearFila,
     filasAMatriz: filasAMatriz, circuloDePerfil: circuloDePerfil, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
   };
 }

@@ -25,3 +25,10 @@ tomados de la fila modelo `FILA_MODELO_CONCENTRADO`). La app solo escribe valore
 - Duplicadas dentro del mismo Excel (mismo email o mismo teléfono): se queda la primera.
 
 Estas reglas están en `apps_script/Logica.gs` (`MAPA_SUCURSAL`, `MAPA_PERFIL`, `MAPA_IDIOMA`, `formatearFila`).
+
+## Pestaña Comparación
+
+En cada corte se reescribe la pestaña **Comparación** del archivo Corte (sin formato), con una fila por cada fila del Excel:
+fila del Excel, email y teléfono tal como se compararon, resultado (`Ya está (email)`, `Ya está (teléfono)`,
+`Ya está (email y teléfono)`, `NUEVA -> ToConcentrado`, `Omitida: …`) y la fila de Concentrado donde se encontró.
+Sirve para revisar por qué una fila pasó (o no) a ToConcentrado.

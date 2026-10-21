@@ -21,5 +21,6 @@ var CONFIG = {
   NOMBRE_CORTE: 'Corte',
   PESTANA_RAW: 'Raw',
   PESTANA_TO_CONCENTRADO: 'ToConcentrado',
+  PESTANA_COMPARACION: 'Comparación',  // detalle de cada fila del Excel: encontrada o no, y en qué fila
   PESTANA_BITACORA: 'Bitácora'
 };

@@ -40,11 +40,12 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
     tiempos.concentrado = segundosDesde_(marca);
     marca = Date.now();
 
-    var corte = calcularCorte(valoresExcel, concentrado.emails, concentrado.telefonos);
+    var corte = calcularCorte(valoresExcel, concentrado.emails, concentrado.telefonos, CONFIG.FILAS_ENCABEZADO + 1);
 
     var archivo = abrirCorteDelUsuario_(true);
     escribirPestana_(archivo, CONFIG.PESTANA_RAW, filasAMatriz(corte.raw));
     var hojaTo = escribirPestana_(archivo, CONFIG.PESTANA_TO_CONCENTRADO, filasAMatriz(corte.toConcentrado));
+    var hojaComparacion = escribirComparacion_(archivo, corte.comparacion);
     SpreadsheetApp.flush();
     tiempos.escritura = segundosDesde_(marca);
 
@@ -60,7 +61,8 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
       tiempos: tiempos,
       segundos: segundosDesde_(inicio),
       urlCorte: archivo.getUrl(),
-      urlToConcentrado: archivo.getUrl() + '#gid=' + hojaTo.getSheetId()
+      urlToConcentrado: archivo.getUrl() + '#gid=' + hojaTo.getSheetId(),
+      urlComparacion: archivo.getUrl() + '#gid=' + hojaComparacion.getSheetId()
     };
     anotarBitacora_(archivo, resumen);
     return resumen;
@@ -137,6 +139,18 @@ function escribirPestana_(archivo, nombre, matriz) {
       .setValues(matriz);
   }
   hoja.getRange(CONFIG.FILAS_ENCABEZADO, 1, Math.max(matriz.length, 1) + 1, columnas).createFilter();
+  return hoja;
+}
+
+// Pestaña simple (sin formato de Concentrado) con el resultado de cada fila del Excel, para revisar la comparación.
+function escribirComparacion_(archivo, filas) {
+  var hoja = archivo.getSheetByName(CONFIG.PESTANA_COMPARACION) || archivo.insertSheet(CONFIG.PESTANA_COMPARACION);
+  hoja.clearContents();
+  var matriz = [TITULOS_COMPARACION].concat(filas);
+  if (hoja.getMaxRows() < matriz.length) hoja.insertRowsAfter(hoja.getMaxRows(), matriz.length - hoja.getMaxRows());
+  hoja.getRange(1, 1, matriz.length, TITULOS_COMPARACION.length).setValues(matriz);
+  hoja.getRange(1, 1, 1, TITULOS_COMPARACION.length).setFontWeight('bold');
+  hoja.setFrozenRows(1);
   return hoja;
 }
 

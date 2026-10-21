@@ -52,9 +52,10 @@
   var resultado = document.getElementById('resultado');
   var enlaces = document.getElementById('enlaces');
 
-  function mostrarEnlaces(urlCorte, urlTo) {
+  function mostrarEnlaces(urlCorte, urlTo, urlComparacion) {
     enlaces.innerHTML = '';
     if (urlTo) enlaces.appendChild(enlace(urlTo, 'Abrir ToConcentrado'));
+    if (urlComparacion) enlaces.appendChild(enlace(urlComparacion, 'Ver la comparación fila por fila'));
     if (urlCorte) enlaces.appendChild(enlace(urlCorte, 'Abrir mi archivo Corte'));
   }
 
@@ -119,7 +120,7 @@
           detalle.textContent = 'Excel ' + r.tiempos.excel + ' s · Concentrado (' + r.filasConcentrado +
             ' filas) ' + r.tiempos.concentrado + ' s · escritura ' + r.tiempos.escritura + ' s';
           resultado.appendChild(detalle);
-          mostrarEnlaces(r.urlCorte, r.urlToConcentrado);
+          mostrarEnlaces(r.urlCorte, r.urlToConcentrado, r.urlComparacion);
           boton.disabled = false;
         })
         .withFailureHandler(mostrarError)
