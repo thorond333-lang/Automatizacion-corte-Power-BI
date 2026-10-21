@@ -11,6 +11,7 @@ m._compile(fs.readFileSync(archivo, 'utf8'), archivo);
 const L = m.exports;
 
 const TITULOS = ['FechaDealCompleta', 'DealID', 'unidadNegocio', 'Firstname', 'Email', 'Phone', 'UnificadoPerfil',
+  'DescFertilidadPerfil', 'DescFertilidadScore',
   'DescFertilidadUserpersona', 'edad', 'IdFertilidadSucursal', 'PreguntaAbierta', 'idiomaRespuesta'];
 
 function fila(o) {
@@ -87,7 +88,7 @@ prueba('comparación O: basta email o teléfono', () => {
 prueba('formatearFila arma las columnas de Concentrado', () => {
   const r = L.prepararFilas([TITULOS, fila({
     FechaDealCompleta: new Date(2026, 9, 19, 14, 30), Firstname: 'Ana', Email: ' ana@x.com ',
-    Phone: '+1 555-000-0099', UnificadoPerfil: 'Blue Yellow', DescFertilidadUserpersona: 'Single Woman',
+    Phone: '+1 555-000-0099', DescFertilidadPerfil: 'Blue', DescFertilidadScore: 'Yellow', DescFertilidadUserpersona: 'Single Woman',
     edad: '33', IdFertilidadSucursal: 'SCHOU', PreguntaAbierta: 'Línea uno\nLínea dos', idiomaRespuesta: 'en'
   })]);
   const f = L.formatearFila(r.filas[0]);
@@ -117,8 +118,15 @@ prueba('mapas de sucursal, perfil e idioma', () => {
   assert.strictEqual(f({ IdFertilidadSucursal: 'IOC' }).E, 'Orange County');
   assert.strictEqual(f({ IdFertilidadSucursal: 'INCOR' }).E, 'Corporativo');
   assert.strictEqual(f({ IdFertilidadSucursal: 'INCUN' }).E, 'Internacional');
-  assert.strictEqual(f({ UnificadoPerfil: 'Green White' }).F, 'LS VERDE BLANCO');
-  assert.strictEqual(f({ UnificadoPerfil: 'Blue' }).F, '');
+  assert.strictEqual(f({ DescFertilidadPerfil: 'Green', DescFertilidadScore: 'White' }).F, 'LS VERDE BLANCO');
+  assert.strictEqual(f({ DescFertilidadPerfil: 'Blue', DescFertilidadScore: 'Intermediate' }).F, 'LP AZUL INTERMEDIO');
+  // El perfil sale de I + J aunque G (UnificadoPerfil) venga vacía o distinta.
+  assert.strictEqual(f({ UnificadoPerfil: '', DescFertilidadPerfil: 'Blue', DescFertilidadScore: 'Yellow' }).F, 'LP AZUL AMARILLO');
+  // Falta I o J -> F y L vacías.
+  const soloColor = f({ UnificadoPerfil: 'Blue', DescFertilidadPerfil: 'Blue', DescFertilidadScore: '' });
+  assert.strictEqual(soloColor.F, '');
+  assert.strictEqual(soloColor.L, '');
+  assert.strictEqual(f({ DescFertilidadPerfil: '', DescFertilidadScore: 'Yellow' }).F, '');
   assert.strictEqual(f({ idiomaRespuesta: 'es', PreguntaAbierta: '' }).H, 'Esp |  |  |  | None');
 });
 

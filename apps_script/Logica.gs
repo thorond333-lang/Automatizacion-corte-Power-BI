@@ -6,7 +6,8 @@
 var COLUMNA_INICIAL_SALIDA = 'B';
 var COLUMNA_FINAL_SALIDA = 'L';
 
-// Columna UnificadoPerfil del Excel -> columna F de Concentrado.
+// Columnas I (DescFertilidadPerfil, color) + J (DescFertilidadScore) del Excel -> columna F de Concentrado.
+// Si falta cualquiera de las dos, F (y L) quedan vacías.
 var MAPA_PERFIL = {
   'blue yellow': 'LP AZUL AMARILLO',
   'blue intermediate': 'LP AZUL INTERMEDIO',
@@ -148,7 +149,9 @@ function soloFecha_(valor) {
 // Fila preparada -> {letra de columna de Concentrado: valor}.
 function formatearFila(fila) {
   var d = fila.datos;
-  var perfil = MAPA_PERFIL[texto_(d.UnificadoPerfil).toLowerCase()] || '';
+  var color = texto_(d.DescFertilidadPerfil);
+  var score = texto_(d.DescFertilidadScore);
+  var perfil = color && score ? MAPA_PERFIL[(color + ' ' + score).toLowerCase()] || '' : '';
   var sucursal = MAPA_SUCURSAL[texto_(d.IdFertilidadSucursal).toUpperCase()] || SUCURSAL_POR_DEFECTO;
   var idioma = MAPA_IDIOMA[texto_(d.idiomaRespuesta).toLowerCase()] || texto_(d.idiomaRespuesta);
   var descripcion = [

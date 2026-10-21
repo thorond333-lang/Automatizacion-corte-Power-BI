@@ -9,7 +9,7 @@ tomados de la fila modelo `FILA_MODELO_CONCENTRADO`). La app solo escribe valore
 | C | Fecha de contacto (sin hora), la del Excel | `FechaDealCompleta` |
 | D | Email tal cual | `Email` (columna E) |
 | E | Sucursal: `SCHOU`→Houston, `IOC`→Orange County, `INCOR`→Corporativo, cualquier otra→Internacional | `IdFertilidadSucursal` |
-| F | Perfil: Blue Yellow→LP AZUL AMARILLO, Blue Intermediate→LP AZUL INTERMEDIO, Blue White→LS AZUL BLANCO, Green Yellow→LP VERDE AMARILLO, Green Intermediate→LS VERDE INTERMEDIO, Green White→LS VERDE BLANCO (otro→vacío) | `UnificadoPerfil` |
+| F | Perfil: Blue Yellow→LP AZUL AMARILLO, Blue Intermediate→LP AZUL INTERMEDIO, Blue White→LS AZUL BLANCO, Green Yellow→LP VERDE AMARILLO, Green Intermediate→LS VERDE INTERMEDIO, Green White→LS VERDE BLANCO (si falta I o J, o la combinación no existe→vacío) | `DescFertilidadPerfil` (columna I) + `DescFertilidadScore` (columna J) |
 | G | `NewLead` | fijo |
 | H | `Idioma \| Nombre \| Edad \| Perfil de usuario \| Pregunta` (idioma en→Ing, es→Esp; pregunta vacía→None; en una sola línea) | `idiomaRespuesta`, `Firstname`, `edad`, `DescFertilidadUserpersona`, `PreguntaAbierta` |
 | I, J | vacías | — |
