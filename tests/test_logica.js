@@ -284,19 +284,25 @@ prueba('listas desde la hoja de asignaciones: por nombre de columna, respaldo si
   assert.deepStrictEqual(vacia.avisos, []);
 });
 
-prueba('ToRawDaniNew: quita títulos, filas vacías y columnas vacías del final; deja las de en medio', () => {
+prueba('ToRawDaniNew: quita títulos, filas vacías, lo de abajo de la última fecha y columnas vacías del final', () => {
+  const f = new Date(2026, 9, 21, 8, 30);
   const valores = [
     ['A', 'B', 'C', 'D', 'E'],       // 1 títulos
-    ['x', '', 'z', '', ''],          // 2
+    [f, '', 'z', '', ''],            // 2
     ['', '', '', '', ''],            // 3 vacía
     ['', '', '', '', ''],            // 4 vacía
-    ['x', '', '', 'w', ''],          // 5
+    [f, '', '', 'w', ''],            // 5 última con fecha en A
     [null, '', '', '', '']           // 6 vacía
   ];
   const r = L.limpiezaToRaw(valores);
   assert.deepStrictEqual(r.bloquesFilas, [[6, 1], [3, 2], [1, 1]]);  // de abajo hacia arriba
   assert.strictEqual(r.filasQueQuedan, 2);
   assert.strictEqual(r.ultimaColumna, 4);                        // E (solo título) se va; B (vacía en medio) se queda
+  // Lo de abajo de la última fecha en A (Total, filtros aplicados) se va, aunque tenga datos en otras columnas.
+  const conTotal = [['Fecha', 'X'], [f, 'a'], [f, 'b'], ['Total', 'b'], [null, null], ['Applied filters:\nFechaDia…', null]];
+  assert.deepStrictEqual(L.limpiezaToRaw(conTotal), { bloquesFilas: [[4, 3], [1, 1]], filasQueQuedan: 2, ultimaColumna: 2 });
+  // Sin ninguna fecha en A (otro formato de Excel) no se corta nada: solo títulos y filas vacías.
+  assert.strictEqual(L.limpiezaToRaw([['Fecha'], ['texto'], [''], ['Total']]).filasQueQuedan, 2);
   assert.deepStrictEqual(L.limpiezaToRaw([['solo títulos']]),
     { bloquesFilas: [[1, 1]], filasQueQuedan: 0, ultimaColumna: 0 });
 });

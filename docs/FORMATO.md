@@ -72,7 +72,8 @@ de la **B a la L** ya seleccionadas (en el enlace va `&range=B3:L…`), para cop
 ## ToRawDaniNew
 
 Un archivo **ToRawDaniNew** en el Drive de cada usuario (uno solo; se reemplaza en cada corte y el enlace no cambia), con una
-**copia exacta** de la hoja del Excel cargado (valores y formato) **sin la fila de títulos**, sin filas vacías y sin columnas
-vacías al final. Las columnas vacías de en medio (por ejemplo `DescFertilidadMotivo`) **se quedan**, para que cada dato siga
+**copia exacta** de la hoja del Excel cargado (valores y formato) **sin la fila de títulos**, sin filas vacías, sin columnas
+vacías al final y **hasta la última fila cuya columna A tiene fecha y hora** (se quitan `Total`, `Applied filters: …` y
+todo lo que esté debajo; si ninguna fila tiene fecha en A, no se corta nada). Las columnas vacías de en medio (por ejemplo `DescFertilidadMotivo`) **se quedan**, para que cada dato siga
 en la misma columna que en el Excel.
 El botón **ToRawDaniNew** de la página abre el archivo con todas las celdas con datos ya seleccionadas, listas para copiar.

@@ -155,8 +155,12 @@ function prepararFilas(valores) {
   return resultado;
 }
 
+function esFecha_(valor) {
+  return Object.prototype.toString.call(valor) === '[object Date]' && !isNaN(valor);
+}
+
 function soloFecha_(valor) {
-  if (Object.prototype.toString.call(valor) === '[object Date]' && !isNaN(valor)) {
+  if (esFecha_(valor)) {
     return new Date(valor.getFullYear(), valor.getMonth(), valor.getDate());
   }
   return texto_(valor);
@@ -356,7 +360,8 @@ function listasDeAsignacion(columnas, respaldo) {
 
 // ---------- ToRawDaniNew ----------
 // Valores de la hoja del Excel -> qué borrar para dejar una copia exacta sin títulos ni filas vacías:
-// la fila 1, cada fila totalmente vacía y las columnas vacías del final. Las columnas vacías de en medio se
+// la fila 1, cada fila totalmente vacía, todo lo que está debajo de la última fila cuya columna A es una fecha
+// (el Excel termina con 'Total' y 'Applied filters: …') y las columnas vacías del final. Las columnas vacías de en medio se
 // quedan, para que cada dato siga en la misma columna que en el Excel.
 // Devuelve {bloquesFilas: [[fila, cantidad], ...] de abajo hacia arriba (para borrar en ese orden),
 // filasQueQuedan, ultimaColumna}.
@@ -364,8 +369,14 @@ function limpiezaToRaw(valores) {
   var vacia = function (fila) { return !fila || fila.every(function (v) { return texto_(v) === ''; }); };
   var borrar = [];
   var ultimaColumna = 0;
+  var ultimaConFecha = 0;
   (valores || []).forEach(function (fila, i) {
-    if (i === 0 || vacia(fila)) {
+    if (i > 0 && fila && esFecha_(fila[0])) ultimaConFecha = i;
+  });
+  // Si ninguna fila tiene fecha en A (Excel con otro formato), no se corta nada: mejor de más que vacío.
+  if (!ultimaConFecha) ultimaConFecha = (valores || []).length;
+  (valores || []).forEach(function (fila, i) {
+    if (i === 0 || i > ultimaConFecha || vacia(fila)) {
       borrar.push(i + 1);
       return;
     }
