@@ -3,6 +3,7 @@
 // de quien la usa: su Corte queda en su Drive y lee Concentrado con su propio acceso.
 
 var PROPIEDAD_ID_CORTE = 'ID_CORTE';          // propiedad de cada usuario: su archivo Corte
+var PROPIEDAD_ID_TORAW = 'ID_TORAW';          // propiedad de cada usuario: su archivo ToRawDaniNew
 var PROPIEDAD_ID_PLANTILLA = 'ID_PLANTILLA';  // propiedad del script (común a todos): la plantilla
 
 function doGet() {
@@ -14,9 +15,11 @@ function doGet() {
 // Lo que la página muestra al abrir.
 function obtenerEstado() {
   var corte = abrirCorteDelUsuario_(false);
+  var toRaw = abrirArchivoGuardado_(PROPIEDAD_ID_TORAW);
   return {
     usuario: Session.getActiveUser().getEmail(),
     urlCorte: corte ? corte.getUrl() : '',
+    urlToRaw: toRaw ? toRaw.getUrl() : '',
     plantillaLista: !!idPlantilla_()
   };
 }
@@ -32,7 +35,14 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
     var tiempos = {};
     var marca = Date.now();
 
-    var valoresExcel = leerExcel_(base64, nombreArchivo, tipoArchivo);
+    var idTemporal = convertirExcel_(base64, nombreArchivo, tipoArchivo);
+    try {
+      var hojaExcel = SpreadsheetApp.openById(idTemporal).getSheets()[0];
+      var valoresExcel = hojaExcel.getDataRange().getValues();
+      var toRaw = escribirToRawDaniNew_(hojaExcel, valoresExcel);
+    } finally {
+      borrarArchivo_(idTemporal);
+    }
     tiempos.excel = segundosDesde_(marca);
     marca = Date.now();
 
@@ -50,6 +60,8 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
     var archivo = abrirCorteDelUsuario_(true);
     escribirPestana_(archivo, CONFIG.PESTANA_RAW, filasAMatriz(corte.raw));
     var hojaTo = escribirPestana_(archivo, CONFIG.PESTANA_TO_CONCENTRADO, filasAMatriz(corte.toConcentrado));
+    hojaTo.hideColumns(1);  // se ve (y se copia) de la B en adelante
+    var rangoTo = rangoDatosSalida(CONFIG.FILAS_ENCABEZADO + 1, corte.toConcentrado.length);
     var hojaComparacion = escribirComparacion_(archivo, corte.comparacion);
     SpreadsheetApp.flush();
     tiempos.escritura = segundosDesde_(marca);
@@ -67,7 +79,9 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
       tiempos: tiempos,
       segundos: segundosDesde_(inicio),
       urlCorte: archivo.getUrl(),
-      urlToConcentrado: archivo.getUrl() + '#gid=' + hojaTo.getSheetId(),
+      // &range= abre la hoja con las celdas de datos (B a L) ya seleccionadas, listas para copiar.
+      urlToConcentrado: archivo.getUrl() + '#gid=' + hojaTo.getSheetId() + (rangoTo ? '&range=' + rangoTo : ''),
+      urlToRaw: toRaw.getUrl(),
       urlComparacion: archivo.getUrl() + '#gid=' + hojaComparacion.getSheetId()
     };
     anotarBitacora_(archivo, resumen);
@@ -81,21 +95,64 @@ function segundosDesde_(marca) {
   return Math.round((Date.now() - marca) / 100) / 10;
 }
 
-// Excel -> valores (fila 1 = títulos). Se convierte a una hoja de Google temporal, se lee y se borra.
-function leerExcel_(base64, nombreArchivo, tipoArchivo) {
+// Excel -> hoja de Google temporal (se borra al terminar con borrarArchivo_). Devuelve su ID.
+function convertirExcel_(base64, nombreArchivo, tipoArchivo) {
   var blob = Utilities.newBlob(Utilities.base64Decode(base64),
     tipoArchivo || MimeType.MICROSOFT_EXCEL, nombreArchivo);
-  var temporal = Drive.Files.create(
-    { name: 'Corte temporal - ' + nombreArchivo, mimeType: MimeType.GOOGLE_SHEETS }, blob);
+  return Drive.Files.create(
+    { name: 'Corte temporal - ' + nombreArchivo, mimeType: MimeType.GOOGLE_SHEETS }, blob).id;
+}
+
+function borrarArchivo_(id) {
   try {
-    return SpreadsheetApp.openById(temporal.id).getSheets()[0].getDataRange().getValues();
-  } finally {
-    try {
-      Drive.Files.remove(temporal.id);
-    } catch (e) {
-      DriveApp.getFileById(temporal.id).setTrashed(true);
-    }
+    Drive.Files.remove(id);
+  } catch (e) {
+    DriveApp.getFileById(id).setTrashed(true);
   }
+}
+
+// ToRawDaniNew: copia exacta de la hoja del Excel (valores y formato) sin la fila de títulos, sin filas vacías y sin
+// columnas vacías al final. Un solo archivo por usuario, que se reemplaza en cada corte (el enlace no cambia).
+function escribirToRawDaniNew_(hojaExcel, valores) {
+  var archivo = abrirArchivoGuardado_(PROPIEDAD_ID_TORAW);
+  if (!archivo) {
+    archivo = SpreadsheetApp.create(CONFIG.NOMBRE_TORAW);
+    PropertiesService.getUserProperties().setProperty(PROPIEDAD_ID_TORAW, archivo.getId());
+  }
+  var hoja = hojaExcel.copyTo(archivo);
+  archivo.getSheets().forEach(function (h) {
+    if (h.getSheetId() !== hoja.getSheetId()) archivo.deleteSheet(h);
+  });
+  hoja.setName(CONFIG.NOMBRE_TORAW);
+  var filtro = hoja.getFilter();
+  if (filtro) filtro.remove();
+  hoja.setFrozenRows(0);
+
+  var limpieza = limpiezaToRaw(valores);
+  if (!limpieza.filasQueQuedan) {
+    hoja.clear();
+    return archivo;
+  }
+  limpieza.bloquesFilas.forEach(function (b) { hoja.deleteRows(b[0], b[1]); });
+  var maxFilas = hoja.getMaxRows();
+  if (maxFilas > limpieza.filasQueQuedan) hoja.deleteRows(limpieza.filasQueQuedan + 1, maxFilas - limpieza.filasQueQuedan);
+  var maxColumnas = hoja.getMaxColumns();
+  if (maxColumnas > limpieza.ultimaColumna) {
+    hoja.deleteColumns(limpieza.ultimaColumna + 1, maxColumnas - limpieza.ultimaColumna);
+  }
+  return archivo;
+}
+
+// Un archivo guardado en las propiedades del usuario, o null si no tiene, lo borró o ya no tiene acceso.
+function abrirArchivoGuardado_(propiedad) {
+  var id = PropertiesService.getUserProperties().getProperty(propiedad);
+  if (!id) return null;
+  try {
+    if (!DriveApp.getFileById(id).isTrashed()) return SpreadsheetApp.openById(id);
+  } catch (e) {
+    // Borrado o sin acceso.
+  }
+  return null;
 }
 
 // La "copia local" de Concentrado: solo las columnas de email y teléfono, en UNA lectura,
@@ -205,16 +262,9 @@ function idPlantilla_() {
 
 // El archivo Corte del usuario. Si no tiene (o lo borró), con crear=true se le hace uno desde la plantilla.
 function abrirCorteDelUsuario_(crear) {
+  var existente = abrirArchivoGuardado_(PROPIEDAD_ID_CORTE);
+  if (existente || !crear) return existente;
   var propiedades = PropertiesService.getUserProperties();
-  var id = propiedades.getProperty(PROPIEDAD_ID_CORTE);
-  if (id) {
-    try {
-      if (!DriveApp.getFileById(id).isTrashed()) return SpreadsheetApp.openById(id);
-    } catch (e) {
-      // Borrado o sin acceso: se crea otro abajo.
-    }
-  }
-  if (!crear) return null;
   var plantilla = idPlantilla_();
   if (!plantilla) {
     throw new Error('La app todavía no tiene plantilla. Quien la administra debe ejecutar crearPlantilla() una vez.');

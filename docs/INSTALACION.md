@@ -71,7 +71,8 @@ Guarda con **Ctrl + S**. En **Servicios** (barra izquierda) deben aparecer **Dri
    letra por celda, sin dejar huecos (una letra repetida recibe más filas).
 3. **Compartir:** agrega a la otra persona que podrá cambiarla como **Editor**; en *Acceso general* elige
    **Cualquier persona que tenga el vínculo** como **Lector** (así la app la puede leer con la cuenta de cualquiera).
-4. Copia su ID (la parte del enlace entre `/d/` y `/edit`) y pégalo en `Config` → `ID_HOJA_ASIGNACIONES: '...'`.
+4. Copia su ID (la parte del enlace entre `/d/` y `/edit`) y pégalo en `Config` → `ID_HOJA_ASIGNACIONES: '...'`
+   (ya viene puesto el de la hoja actual).
    Guarda (**Ctrl + S**).
 
 Si la hoja no se puede leer, la app usa las listas de respaldo de `Config` y lo avisa en rojo.

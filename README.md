@@ -5,7 +5,9 @@ App web (Google Apps Script) que hace el corte diario:
 1. Se sube el Excel del día en la página.
 2. Sus filas, ya con el formato de Concentrado, se escriben en la pestaña **Raw** del archivo **Corte** de quien la usa.
 3. Se comparan con la pestaña **Concentrado** de Document 2 (UpdateInConcert): una fila ya existe si coincide el **email O el teléfono** (teléfono = últimos 10 dígitos).
-4. Las filas que no están en Concentrado se escriben en la pestaña **ToConcentrado**.
+4. Las filas que no están en Concentrado se escriben en la pestaña **ToConcentrado**. La columna B lleva la asignación
+   (listas en la hoja compartida "Asignaciones corte").
+5. Se guarda una copia del Excel sin títulos en el archivo **ToRawDaniNew** de quien lo usa.
 
 Raw y ToConcentrado se reemplazan completas en cada corte. Document 2 solo se lee.
 Cada persona tiene su propio archivo Corte en su Drive (se crea solo la primera vez), y todos usan la misma página web.

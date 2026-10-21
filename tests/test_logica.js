@@ -284,4 +284,27 @@ prueba('listas desde la hoja de asignaciones: por nombre de columna, respaldo si
   assert.deepStrictEqual(vacia.avisos, []);
 });
 
+prueba('ToRawDaniNew: quita títulos, filas vacías y columnas vacías del final; deja las de en medio', () => {
+  const valores = [
+    ['A', 'B', 'C', 'D', 'E'],       // 1 títulos
+    ['x', '', 'z', '', ''],          // 2
+    ['', '', '', '', ''],            // 3 vacía
+    ['', '', '', '', ''],            // 4 vacía
+    ['x', '', '', 'w', ''],          // 5
+    [null, '', '', '', '']           // 6 vacía
+  ];
+  const r = L.limpiezaToRaw(valores);
+  assert.deepStrictEqual(r.bloquesFilas, [[6, 1], [3, 2], [1, 1]]);  // de abajo hacia arriba
+  assert.strictEqual(r.filasQueQuedan, 2);
+  assert.strictEqual(r.ultimaColumna, 4);                        // E (solo título) se va; B (vacía en medio) se queda
+  assert.deepStrictEqual(L.limpiezaToRaw([['solo títulos']]),
+    { bloquesFilas: [[1, 1]], filasQueQuedan: 0, ultimaColumna: 0 });
+});
+
+prueba('rango para seleccionar ToConcentrado: B a L de las filas con datos', () => {
+  assert.strictEqual(L.rangoDatosSalida(3, 10), 'B3:L12');
+  assert.strictEqual(L.rangoDatosSalida(3, 1), 'B3:L3');
+  assert.strictEqual(L.rangoDatosSalida(3, 0), '');
+});
+
 console.log(`\n${pruebas} pruebas OK`);

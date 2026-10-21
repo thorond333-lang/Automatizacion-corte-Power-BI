@@ -63,3 +63,15 @@ Reglas (decididas por el usuario):
 
 La página muestra cuántas filas recibió cada letra, su mezcla de círculos (🟡 ⚪ 🟠) y la lista usada (hoja o respaldo), y la pestaña Comparación tiene la columna
 **Asignado (B)**.
+
+## ToConcentrado: lista para copiar
+
+La columna **A** de ToConcentrado está oculta. El botón **ToConcentrado** de la página abre la pestaña con las celdas de datos
+de la **B a la L** ya seleccionadas (en el enlace va `&range=B3:L…`), para copiarlas sin seleccionar a mano.
+
+## ToRawDaniNew
+
+Un archivo **ToRawDaniNew** en el Drive de cada usuario (uno solo; se reemplaza en cada corte y el enlace no cambia), con una
+**copia exacta** de la hoja del Excel cargado (valores y formato) **sin la fila de títulos**, sin filas vacías y sin columnas
+vacías al final. Las columnas vacías de en medio (por ejemplo `DescFertilidadMotivo`) **se quedan**, para que cada dato siga
+en la misma columna que en el Excel.

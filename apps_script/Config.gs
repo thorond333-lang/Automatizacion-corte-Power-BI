@@ -24,12 +24,15 @@ var CONFIG = {
   PESTANA_COMPARACION: 'Comparación',  // detalle de cada fila del Excel: encontrada o no, y en qué fila
   PESTANA_BITACORA: 'Bitácora',
 
+  // Archivo (y pestaña) con la copia del Excel sin títulos; uno por usuario, se reemplaza en cada corte.
+  NOMBRE_TORAW: 'ToRawDaniNew',
+
   // ---------- Asignaciones (columna B de ToConcentrado) ----------
   // Las listas se leen en cada corte de la hoja compartida "Asignaciones corte": fila 1 = nombre del grupo
   // (Internacional, Corporativo, Branches) y debajo una letra por celda. Una letra repetida recibe más filas
   // (2 veces = el doble). Cambiarla ahí NO requiere publicar nada.
   // ID de esa hoja = la parte del enlace entre /d/ y /edit. Vacío = se usan las listas de respaldo de abajo.
-  ID_HOJA_ASIGNACIONES: '',
+  ID_HOJA_ASIGNACIONES: '1lRA2PtUIS7NffO0PUVY4vLtVRJt2MEzZvIwHuSD-ysU',
 
   ASIGNACION: {
     // Respaldo: se usan (con un aviso en rojo en la página) si la hoja no se puede leer o le falta un grupo.

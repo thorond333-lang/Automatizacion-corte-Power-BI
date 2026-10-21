@@ -31,7 +31,13 @@
     td { padding: 6px 0; border-bottom: 1px solid var(--borde); }
     td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
     a { color: var(--acento); }
-    .enlaces a { display: inline-block; margin: 12px 16px 0 0; }
+    .enlaces { margin-top: 20px; display: grid; gap: 8px; }
+    .enlaces a.boton { display: block; padding: 11px 12px; border: 1px solid var(--acento); border-radius: 8px;
+                       text-align: center; text-decoration: none; font-weight: 600; }
+    .enlaces a.boton.principal { background: var(--acento); color: var(--tarjeta); }
+    details { margin-top: 8px; font-size: 13px; color: var(--suave); }
+    summary { cursor: pointer; }
+    details a { display: inline-block; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -44,8 +50,8 @@
 
   <button id="ejecutar" disabled>Ejecutar corte</button>
   <div id="estado"></div>
-  <div id="resultado"></div>
   <div class="enlaces" id="enlaces"></div>
+  <div id="resultado"></div>
 </main>
 
 <script>
@@ -55,16 +61,25 @@
   var resultado = document.getElementById('resultado');
   var enlaces = document.getElementById('enlaces');
 
-  function mostrarEnlaces(urlCorte, urlTo, urlComparacion) {
+  // u = {toConcentrado, toRaw, corte, comparacion}; los que falten no se muestran.
+  function mostrarEnlaces(u) {
     enlaces.innerHTML = '';
-    if (urlTo) enlaces.appendChild(enlace(urlTo, 'Abrir ToConcentrado'));
-    if (urlComparacion) enlaces.appendChild(enlace(urlComparacion, 'Ver la comparación fila por fila'));
-    if (urlCorte) enlaces.appendChild(enlace(urlCorte, 'Abrir mi archivo Corte'));
+    if (u.toConcentrado) enlaces.appendChild(enlace(u.toConcentrado, 'ToConcentrado', 'boton principal'));
+    if (u.toRaw) enlaces.appendChild(enlace(u.toRaw, 'ToRawDaniNew', 'boton'));
+    if (u.corte) enlaces.appendChild(enlace(u.corte, 'Abrir mi archivo Corte', 'boton'));
+    if (u.comparacion) {
+      var mas = document.createElement('details');
+      var titulo = document.createElement('summary');
+      titulo.textContent = 'Más opciones';
+      mas.appendChild(titulo);
+      mas.appendChild(enlace(u.comparacion, 'Ver la comparación fila por fila', ''));
+      enlaces.appendChild(mas);
+    }
   }
 
-  function enlace(url, texto) {
+  function enlace(url, texto, clase) {
     var a = document.createElement('a');
-    a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = texto;
+    a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = texto; a.className = clase;
     return a;
   }
 
@@ -120,7 +135,7 @@
       document.getElementById('usuario').textContent = 'Sesión: ' + e.usuario +
         (e.urlCorte ? '' : ' · La primera vez se creará tu archivo Corte en tu Drive.');
       if (!e.plantillaLista) mostrarError('La app todavía no tiene plantilla (falta ejecutar crearPlantilla).');
-      mostrarEnlaces(e.urlCorte, '');
+      mostrarEnlaces({ toRaw: e.urlToRaw, corte: e.urlCorte });
     })
     .withFailureHandler(mostrarError)
     .obtenerEstado();
@@ -165,7 +180,8 @@
           detalle.textContent = 'Excel ' + r.tiempos.excel + ' s · Concentrado (' + r.filasConcentrado +
             ' filas) ' + r.tiempos.concentrado + ' s · escritura ' + r.tiempos.escritura + ' s';
           resultado.appendChild(detalle);
-          mostrarEnlaces(r.urlCorte, r.urlToConcentrado, r.urlComparacion);
+          mostrarEnlaces({ toConcentrado: r.urlToConcentrado, toRaw: r.urlToRaw, corte: r.urlCorte,
+            comparacion: r.urlComparacion });
           boton.disabled = false;
         })
         .withFailureHandler(mostrarError)

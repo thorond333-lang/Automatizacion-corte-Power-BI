@@ -354,6 +354,44 @@ function listasDeAsignacion(columnas, respaldo) {
   return { listas: listas, fuente: fuente, avisos: avisos };
 }
 
+// ---------- ToRawDaniNew ----------
+// Valores de la hoja del Excel -> qué borrar para dejar una copia exacta sin títulos ni filas vacías:
+// la fila 1, cada fila totalmente vacía y las columnas vacías del final. Las columnas vacías de en medio se
+// quedan, para que cada dato siga en la misma columna que en el Excel.
+// Devuelve {bloquesFilas: [[fila, cantidad], ...] de abajo hacia arriba (para borrar en ese orden),
+// filasQueQuedan, ultimaColumna}.
+function limpiezaToRaw(valores) {
+  var vacia = function (fila) { return !fila || fila.every(function (v) { return texto_(v) === ''; }); };
+  var borrar = [];
+  var ultimaColumna = 0;
+  (valores || []).forEach(function (fila, i) {
+    if (i === 0 || vacia(fila)) {
+      borrar.push(i + 1);
+      return;
+    }
+    for (var c = fila.length - 1; c >= ultimaColumna; c--) {
+      if (texto_(fila[c]) !== '') { ultimaColumna = c + 1; break; }
+    }
+  });
+  var bloques = [];
+  borrar.forEach(function (f) {
+    var ultimo = bloques[bloques.length - 1];
+    if (ultimo && ultimo[0] + ultimo[1] === f) ultimo[1]++;
+    else bloques.push([f, 1]);
+  });
+  return {
+    bloquesFilas: bloques.reverse(),
+    filasQueQuedan: (valores || []).length - borrar.length,
+    ultimaColumna: ultimaColumna
+  };
+}
+
+// Rango (A1) con los datos de ToConcentrado, de COLUMNA_INICIAL_SALIDA a COLUMNA_FINAL_SALIDA ('' si no hay filas).
+function rangoDatosSalida(primeraFila, filas) {
+  if (!filas) return '';
+  return COLUMNA_INICIAL_SALIDA + primeraFila + ':' + COLUMNA_FINAL_SALIDA + (primeraFila + filas - 1);
+}
+
 var TITULOS_COMPARACION = ['Fila del Excel', 'Email (comparado)', 'Teléfono (últimos 10)', 'Resultado',
   'Fila en Concentrado (email)', 'Fila en Concentrado (teléfono)', 'Asignado (B)'];
 
@@ -406,6 +444,6 @@ if (typeof module !== 'undefined') {
     clavesTelefonoDeCelda: clavesTelefonoDeCelda, indiceConcentrado: indiceConcentrado,
     estaEnConcentrado: estaEnConcentrado, buscarEnConcentrado: buscarEnConcentrado, prepararFilas: prepararFilas, formatearFila: formatearFila,
     filasAMatriz: filasAMatriz, circuloDePerfil: circuloDePerfil,
-    listasDeAsignacion: listasDeAsignacion, pesosDeLista: pesosDeLista, repartirCupos: repartirCupos, asignarGrupo: asignarGrupo, asignarLetras: asignarLetras, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
+    listasDeAsignacion: listasDeAsignacion, limpiezaToRaw: limpiezaToRaw, rangoDatosSalida: rangoDatosSalida, pesosDeLista: pesosDeLista, repartirCupos: repartirCupos, asignarGrupo: asignarGrupo, asignarLetras: asignarLetras, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
   };
 }
