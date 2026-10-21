@@ -64,6 +64,18 @@ Guarda con **Ctrl + S**. En **Servicios** (barra izquierda) deben aparecer **Dri
 > Para copiar el formato exacto, la función copia Concentrado completo y luego borra las filas de datos. El historial de
 > versiones de la plantilla conserva ese momento: solo lo ve quien puede **editar** la plantilla (tú), no los lectores.
 
+## 5b. Hoja de asignaciones (columna B)
+
+1. En tu Drive: **Nuevo → Hojas de cálculo de Google**, nombre **Asignaciones corte**.
+2. En la **primera pestaña**, fila 1: `Internacional` (A1), `Corporativo` (B1), `Branches` (C1). Debajo de cada título, una
+   letra por celda, sin dejar huecos (una letra repetida recibe más filas).
+3. **Compartir:** agrega a la otra persona que podrá cambiarla como **Editor**; en *Acceso general* elige
+   **Cualquier persona que tenga el vínculo** como **Lector** (así la app la puede leer con la cuenta de cualquiera).
+4. Copia su ID (la parte del enlace entre `/d/` y `/edit`) y pégalo en `Config` → `ID_HOJA_ASIGNACIONES: '...'`.
+   Guarda (**Ctrl + S**).
+
+Si la hoja no se puede leer, la app usa las listas de respaldo de `Config` y lo avisa en rojo.
+
 ## 6. Publica la página
 
 1. **Implementar** → **Nueva implementación** → engrane → **Aplicación web**.

@@ -26,6 +26,7 @@
     button:disabled { opacity: .5; cursor: default; }
     #estado { margin-top: 16px; min-height: 1.5em; }
     .error { color: var(--error); }
+    .aviso { margin-top: 16px; font-weight: 600; }
     table { width: 100%; border-collapse: collapse; margin-top: 16px; }
     td { padding: 6px 0; border-bottom: 1px solid var(--borde); }
     td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
@@ -70,6 +71,12 @@
   // Cuántas filas recibió cada letra de cada grupo, con su mezcla de círculos (columna L).
   function mostrarAsignaciones(a) {
     if (!a) return;
+    (a.avisos || []).forEach(function (texto) {
+      var aviso = document.createElement('div');
+      aviso.className = 'error aviso';
+      aviso.textContent = '⚠ ' + texto;
+      resultado.appendChild(aviso);
+    });
     Object.keys(a.grupos).forEach(function (grupo) {
       var titulo = document.createElement('h2');
       titulo.textContent = 'Asignaciones · ' + grupo;
@@ -85,6 +92,13 @@
         tr.insertCell().textContent = c.total;
       });
       resultado.appendChild(tabla);
+      if (a.listas && a.listas[grupo]) {
+        var usada = document.createElement('div');
+        usada.className = 'suave';
+        usada.textContent = 'Lista usada (' + (a.fuente[grupo] === 'hoja' ? 'hoja de asignaciones' : 'respaldo de Config') +
+          '): ' + a.listas[grupo].join(', ');
+        resultado.appendChild(usada);
+      }
     });
     if (a.sinLista.length) {
       var aviso = document.createElement('div');

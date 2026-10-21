@@ -13,4 +13,5 @@ ejecutándose como quien la abre: cada cuenta necesita poder ver Document 2.
 - Desde el entorno de Claude no hay acceso a Google (docs.google.com/drive bloqueados): lo de `Codigo.gs` no se ha podido
   probar aquí. Decirlo siempre.
 - Formato de salida, comparación y **asignaciones de la columna B** (reglas del usuario): `docs/FORMATO.md`.
-  Las listas de asignación cambian seguido: viven en `Config.gs` → `ASIGNACION`, una por grupo, independientes.
+  Las listas de asignación cambian seguido: se leen en cada corte de la hoja compartida "Asignaciones corte"
+  (`ID_HOJA_ASIGNACIONES`); si falla, respaldo `Config.gs` → `ASIGNACION.listas` + aviso en rojo (decisión del usuario).

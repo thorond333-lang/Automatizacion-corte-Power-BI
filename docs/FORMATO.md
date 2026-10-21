@@ -35,10 +35,15 @@ Sirve para revisar por qué una fila pasó (o no) a ToConcentrado.
 
 ## Asignaciones (columna B de ToConcentrado)
 
-Las listas están en `apps_script/Config.gs` → `ASIGNACION`. Para que un cambio llegue a la página hay que guardar y publicar una
-**Nueva versión**.
+Las listas se leen **en cada corte** de la hoja compartida **"Asignaciones corte"** (`ID_HOJA_ASIGNACIONES` en `Config.gs`):
+fila 1 = nombre del grupo (`Internacional`, `Corporativo`, `Branches`), debajo una letra por celda. Cambiarla no requiere publicar
+nada. La editan solo el dueño y otra persona; el resto del equipo la puede ver (por vínculo).
 
-| Grupo | Sucursales (columna E) | Lista actual |
+**Respaldo:** si la hoja no está configurada o no se puede leer, o le falta la columna de un grupo, se usan las listas de
+`Config.gs` → `ASIGNACION.listas` para ese grupo y la página muestra un aviso en rojo (también queda en la Bitácora).
+Una columna con título pero sin letras = lista vacía a propósito: la B queda vacía y la página lo avisa.
+
+| Grupo | Sucursales (columna E) | Lista inicial |
 |---|---|---|
 | Internacional | Internacional | RA2, AL2, RA2, AL2, RA2, AL2, M, T:, AH:, AB:, M |
 | Corporativo | Corporativo | AH:, E, AL2, F:, E, F: |
@@ -56,5 +61,5 @@ Reglas (decididas por el usuario):
 - **Listas independientes:** mover a alguien de equipo = quitar su letra de una lista y ponerla en otra; los demás grupos no
   cambian. Una lista vacía (o una sucursal sin grupo) deja la B vacía y la página lo avisa.
 
-La página muestra cuántas filas recibió cada letra y su mezcla de círculos (🟡 ⚪ 🟠), y la pestaña Comparación tiene la columna
+La página muestra cuántas filas recibió cada letra, su mezcla de círculos (🟡 ⚪ 🟠) y la lista usada (hoja o respaldo), y la pestaña Comparación tiene la columna
 **Asignado (B)**.

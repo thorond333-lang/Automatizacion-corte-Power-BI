@@ -40,8 +40,12 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
     tiempos.concentrado = segundosDesde_(marca);
     marca = Date.now();
 
+    var asignacion = leerAsignaciones_();
     var corte = calcularCorte(valoresExcel, concentrado.emails, concentrado.telefonos, CONFIG.FILAS_ENCABEZADO + 1,
-      CONFIG.ASIGNACION);
+      { listas: asignacion.listas, grupos: CONFIG.ASIGNACION.grupos });
+    corte.asignaciones.listas = asignacion.listas;
+    corte.asignaciones.fuente = asignacion.fuente;
+    corte.asignaciones.avisos = asignacion.avisos;
 
     var archivo = abrirCorteDelUsuario_(true);
     escribirPestana_(archivo, CONFIG.PESTANA_RAW, filasAMatriz(corte.raw));
@@ -144,6 +148,32 @@ function escribirPestana_(archivo, nombre, matriz) {
   return hoja;
 }
 
+// Listas de asignación de la hoja compartida (ID_HOJA_ASIGNACIONES). Si no se puede leer, las de respaldo de Config
+// con un aviso: el corte nunca se detiene por esto.
+function leerAsignaciones_() {
+  var respaldo = CONFIG.ASIGNACION.listas;
+  var columnas = null;
+  var problema = '';
+  if (!CONFIG.ID_HOJA_ASIGNACIONES) {
+    problema = 'No hay hoja de asignaciones configurada (ID_HOJA_ASIGNACIONES en Config)';
+  } else {
+    try {
+      var filas = SpreadsheetApp.openById(CONFIG.ID_HOJA_ASIGNACIONES).getSheets()[0].getDataRange().getValues();
+      columnas = (filas[0] || []).map(function (_, c) {
+        return filas.map(function (fila) { return fila[c]; });
+      });
+    } catch (e) {
+      problema = 'No se pudo leer la hoja de asignaciones (' + e.message + ')';
+    }
+  }
+  if (problema) {
+    var fuente = {};
+    Object.keys(respaldo).forEach(function (g) { fuente[g] = 'respaldo'; });
+    return { listas: respaldo, fuente: fuente, avisos: [problema + ': se usaron las listas de respaldo de Config.'] };
+  }
+  return listasDeAsignacion(columnas, respaldo);
+}
+
 // Pestaña simple (sin formato de Concentrado) con el resultado de cada fila del Excel, para revisar la comparación.
 function escribirComparacion_(archivo, filas) {
   var hoja = archivo.getSheetByName(CONFIG.PESTANA_COMPARACION) || archivo.insertSheet(CONFIG.PESTANA_COMPARACION);
@@ -159,13 +189,14 @@ function escribirComparacion_(archivo, filas) {
 // Sin datos personales: solo quién, cuándo y cuántas filas.
 function anotarBitacora_(archivo, r) {
   var hoja = archivo.getSheetByName(CONFIG.PESTANA_BITACORA) || archivo.insertSheet(CONFIG.PESTANA_BITACORA);
-  if (hoja.getLastRow() === 0) {
-    hoja.appendRow(['Fecha', 'Usuario', 'Archivo', 'Filas en Excel', 'Sin email ni teléfono', 'Duplicadas',
-      'En Raw', 'Ya en Concentrado', 'A ToConcentrado', 'Filas leídas de Concentrado', 'Segundos']);
-    hoja.setFrozenRows(1);
-  }
+  var titulos = ['Fecha', 'Usuario', 'Archivo', 'Filas en Excel', 'Sin email ni teléfono', 'Duplicadas',
+    'En Raw', 'Ya en Concentrado', 'A ToConcentrado', 'Filas leídas de Concentrado', 'Segundos', 'Listas de asignación'];
+  hoja.getRange(1, 1, 1, titulos.length).setValues([titulos]);
+  hoja.setFrozenRows(1);
+  var avisos = (r.asignaciones && r.asignaciones.avisos) || [];
   hoja.appendRow([new Date(), Session.getActiveUser().getEmail(), r.archivo, r.totalExcel, r.omitidasVacias,
-    r.omitidasDuplicadas, r.enRaw, r.yaEnConcentrado, r.aToConcentrado, r.filasConcentrado, r.segundos]);
+    r.omitidasDuplicadas, r.enRaw, r.yaEnConcentrado, r.aToConcentrado, r.filasConcentrado, r.segundos,
+    avisos.length ? 'RESPALDO: ' + avisos.join(' ') : 'Hoja']);
 }
 
 function idPlantilla_() {

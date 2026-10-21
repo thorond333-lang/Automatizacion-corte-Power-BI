@@ -265,4 +265,23 @@ prueba('calcularCorte asigna solo en ToConcentrado y lo anota en Comparación', 
   assert.deepStrictEqual(r.comparacion.map((c) => c[6]), ['', 'T:', 'AB:']);
 });
 
+prueba('listas desde la hoja de asignaciones: por nombre de columna, respaldo si falta un grupo', () => {
+  const hoja = [
+    ['Branches', 'T:', 'AB:', '', 'E'],            // celda vacía en medio: se ignora
+    ['  internacional ', 'RA2', 'M', 'M'],          // mayúsculas/espacios en el título no importan
+    ['Notas', 'esto no es un grupo']               // columna desconocida: se ignora
+  ];
+  const r = L.listasDeAsignacion(hoja, ASIGNACION.listas);
+  assert.deepStrictEqual(r.listas.Branches, ['T:', 'AB:', 'E']);
+  assert.deepStrictEqual(r.listas.Internacional, ['RA2', 'M', 'M']);
+  assert.deepStrictEqual(r.listas.Corporativo, ASIGNACION.listas.Corporativo);
+  assert.deepStrictEqual(r.fuente, { Branches: 'hoja', Internacional: 'hoja', Corporativo: 'respaldo' });
+  assert.strictEqual(r.avisos.length, 1);
+  assert.ok(r.avisos[0].includes('Corporativo'));
+  // Columna con título pero sin letras = lista vacía a propósito (B vacía), no respaldo.
+  const vacia = L.listasDeAsignacion([['Branches'], ['Internacional', 'M'], ['Corporativo', 'E']], ASIGNACION.listas);
+  assert.deepStrictEqual(vacia.listas.Branches, []);
+  assert.deepStrictEqual(vacia.avisos, []);
+});
+
 console.log(`\n${pruebas} pruebas OK`);

@@ -25,11 +25,15 @@ var CONFIG = {
   PESTANA_BITACORA: 'Bitácora',
 
   // ---------- Asignaciones (columna B de ToConcentrado) ----------
-  // Para cambiar un equipo, edita SOLO su lista. Una letra repetida recibe más filas: 2 veces = el doble.
-  // Mover a alguien de equipo = quitar su letra de una lista y agregarla en la otra; las demás listas no cambian.
-  // Una lista vacía deja la columna B vacía en ese grupo (la página lo avisa).
-  // Después de editar: guardar y publicar una Nueva versión (Implementar -> Administrar implementaciones).
+  // Las listas se leen en cada corte de la hoja compartida "Asignaciones corte": fila 1 = nombre del grupo
+  // (Internacional, Corporativo, Branches) y debajo una letra por celda. Una letra repetida recibe más filas
+  // (2 veces = el doble). Cambiarla ahí NO requiere publicar nada.
+  // ID de esa hoja = la parte del enlace entre /d/ y /edit. Vacío = se usan las listas de respaldo de abajo.
+  ID_HOJA_ASIGNACIONES: '',
+
   ASIGNACION: {
+    // Respaldo: se usan (con un aviso en rojo en la página) si la hoja no se puede leer o le falta un grupo.
+    // Cambiar estas requiere guardar y publicar una Nueva versión.
     listas: {
       Internacional: ['RA2', 'AL2', 'RA2', 'AL2', 'RA2', 'AL2', 'M', 'T:', 'AH:', 'AB:', 'M'],
       Corporativo: ['AH:', 'E', 'AL2', 'F:', 'E', 'F:'],

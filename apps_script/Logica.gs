@@ -330,6 +330,30 @@ function asignarLetras(filasFormateadas, asignacion) {
   return resumen;
 }
 
+// Columnas de la hoja de asignaciones (fila 1 = grupo, debajo las letras) -> listas por grupo.
+// Solo cuenta los grupos de `respaldo`; el que no esté en la hoja usa el de `respaldo`.
+// Devuelve {listas, fuente: {grupo: 'hoja'|'respaldo'}, avisos: [texto]}.
+function listasDeAsignacion(columnas, respaldo) {
+  var listas = {};
+  var fuente = {};
+  var avisos = [];
+  var nombres = {};
+  Object.keys(respaldo).forEach(function (g) { nombres[g.toLowerCase()] = g; });
+  (columnas || []).forEach(function (col) {
+    var grupo = nombres[texto_((col || [])[0]).toLowerCase()];
+    if (!grupo || grupo in listas) return;
+    listas[grupo] = col.slice(1).map(texto_).filter(function (l) { return l; });
+    fuente[grupo] = 'hoja';
+  });
+  Object.keys(respaldo).forEach(function (g) {
+    if (g in listas) return;
+    listas[g] = respaldo[g].slice();
+    fuente[g] = 'respaldo';
+    avisos.push('La hoja de asignaciones no tiene la columna "' + g + '": se usó la lista de respaldo de Config.');
+  });
+  return { listas: listas, fuente: fuente, avisos: avisos };
+}
+
 var TITULOS_COMPARACION = ['Fila del Excel', 'Email (comparado)', 'Teléfono (últimos 10)', 'Resultado',
   'Fila en Concentrado (email)', 'Fila en Concentrado (teléfono)', 'Asignado (B)'];
 
@@ -382,6 +406,6 @@ if (typeof module !== 'undefined') {
     clavesTelefonoDeCelda: clavesTelefonoDeCelda, indiceConcentrado: indiceConcentrado,
     estaEnConcentrado: estaEnConcentrado, buscarEnConcentrado: buscarEnConcentrado, prepararFilas: prepararFilas, formatearFila: formatearFila,
     filasAMatriz: filasAMatriz, circuloDePerfil: circuloDePerfil,
-    pesosDeLista: pesosDeLista, repartirCupos: repartirCupos, asignarGrupo: asignarGrupo, asignarLetras: asignarLetras, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
+    listasDeAsignacion: listasDeAsignacion, pesosDeLista: pesosDeLista, repartirCupos: repartirCupos, asignarGrupo: asignarGrupo, asignarLetras: asignarLetras, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
   };
 }
