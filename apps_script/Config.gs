@@ -11,7 +11,7 @@ var CONFIG = {
 
   // Fila de Concentrado cuyo formato (colores, listas desplegables, casillas) copian Raw y ToConcentrado.
   // Solo la usa crearPlantilla(), una vez.
-  FILA_MODELO_CONCENTRADO: 51414,
+  FILA_MODELO_CONCENTRADO: 51362,
 
   // Columnas de Concentrado donde están el email y el teléfono (las que se comparan).
   COLUMNA_EMAIL_CONCENTRADO: 'D',

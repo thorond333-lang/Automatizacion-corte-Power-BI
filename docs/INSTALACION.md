@@ -46,7 +46,7 @@ Guarda con **Ctrl + S**. En **Servicios** (barra izquierda) deben aparecer **Dri
 
 - `ID_DOCUMENTO_2`: deja el de UpdateInConcert (camino A) o pon el de tu documento de prueba (camino B).
 - `FILAS_ENCABEZADO: 2`: los títulos de Concentrado están en la fila 2. Si están solo en la fila 1, pon 1.
-- `FILA_MODELO_CONCENTRADO: 51414`: la fila cuyo formato se copia. En un documento de prueba, pon una fila que exista
+- `FILA_MODELO_CONCENTRADO: 51362`: la fila cuyo formato se copia (su lista desplegable de la columna B ya incluye `M`). En un documento de prueba, pon una fila que exista
   y tenga el formato correcto (por ejemplo, la 3).
 
 ## 5. Crea la plantilla
@@ -110,3 +110,12 @@ Notas:
 
 Pega los archivos nuevos → **Implementar** → **Administrar implementaciones** → lápiz → **Versión: Nueva versión** →
 **Implementar**. La URL no cambia y todos reciben el cambio.
+
+## Cambiar la fila modelo (formato) después
+
+1. Cambia `FILA_MODELO_CONCENTRADO` en `Config` y guarda.
+2. Ejecuta **crearPlantilla** otra vez: crea una plantilla nueva y la app empieza a usarla (la vieja se puede borrar).
+3. Comparte la plantilla nueva: **Cualquier persona que tenga el vínculo** · **Lector**.
+4. Publica una **Nueva versión**.
+5. Quien ya tenga un archivo **Corte** debe mandarlo a la papelera; en su siguiente corte la app le crea uno nuevo
+   con el formato nuevo (ToRawDaniNew no cambia).
