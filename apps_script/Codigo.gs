@@ -154,6 +154,34 @@ function urlToRaw_(archivo) {
   return archivo.getUrl() + '#gid=' + hoja.getSheetId() + '&range=' + hoja.getDataRange().getA1Notation();
 }
 
+// Las listas desplegables "desde un rango" apuntan a otra pestaña de Document 2 que la plantilla no tiene: se
+// convierten en listas escritas con los valores de ese rango. Si no se puede leer, la celda queda sin lista.
+function validacionSinRangos_() {
+  var valoresPorRango = {};
+  return function (validacion) {
+    var condicion = validacion.condition || {};
+    if (condicion.type !== 'ONE_OF_RANGE') return validacion;
+    var rango = String(((condicion.values || [])[0] || {}).userEnteredValue || '').replace(/^=/, '');
+    if (!(rango in valoresPorRango)) {
+      try {
+        var filas = Sheets.Spreadsheets.Values.get(CONFIG.ID_DOCUMENTO_2, rango).values || [];
+        var unicos = [];
+        filas.forEach(function (fila) {
+          fila.forEach(function (v) { if (v !== '' && unicos.indexOf(v) < 0) unicos.push(v); });
+        });
+        valoresPorRango[rango] = unicos.slice(0, 500);
+      } catch (e) {
+        valoresPorRango[rango] = null;
+      }
+    }
+    if (!valoresPorRango[rango] || !valoresPorRango[rango].length) return undefined;
+    return soloDefinidos_({
+      condition: { type: 'ONE_OF_LIST', values: valoresPorRango[rango].map(function (v) { return { userEnteredValue: v }; }) },
+      strict: validacion.strict, showCustomUi: validacion.showCustomUi, inputMessage: validacion.inputMessage
+    });
+  };
+}
+
 // Un archivo guardado en las propiedades del usuario, o null si no tiene, lo borró o ya no tiene acceso.
 function abrirArchivoGuardado_(propiedad) {
   var id = PropertiesService.getUserProperties().getProperty(propiedad);
@@ -335,41 +363,66 @@ function abrirCorteDelUsuario_(crear) {
 }
 
 // UNA VEZ, desde el editor de Apps Script, por quien administra la app (y otra vez si cambia la fila modelo).
-// Crea la plantilla de Corte copiando la pestaña Concentrado (formatos, colores, listas desplegables,
-// casillas) y dejando solo los títulos y la fila modelo vacía. Cada usuario recibe una copia de ella.
-// Todo con la API de Sheets: SpreadsheetApp.openById tiene que cargar Document 2 completo y, como es tan pesado,
-// a veces falla con "No se puede cargar el documento". La API copia la pestaña del lado de Google sin cargarlo.
+// Crea la plantilla de Corte con los títulos de Concentrado y su fila modelo vacía (formato, listas desplegables,
+// casillas, anchos de columna, formato condicional). Cada usuario recibe una copia de ella.
+// Lee SOLO esas filas con la API de Sheets: abrir Document 2 completo o copiar la pestaña entera es demasiado pesado y
+// Google falla ("No se puede cargar el documento" / "Internal error"). La API no trae los colores de las listas
+// desplegables: en la plantilla salen sin color (al pegar en Concentrado toman los colores de allá).
 function crearPlantilla() {
-  var info = Sheets.Spreadsheets.get(CONFIG.ID_DOCUMENTO_2,
-    { fields: 'sheets(properties(sheetId,title),basicFilter.range)' });
-  var origen = info.sheets.filter(function (h) { return h.properties.title === CONFIG.PESTANA_CONCENTRADO; })[0];
+  var encabezado = CONFIG.FILAS_ENCABEZADO;
+  var modelo = CONFIG.FILA_MODELO_CONCENTRADO;
+  var pestana = "'" + CONFIG.PESTANA_CONCENTRADO.replace(/'/g, "''") + "'!";
+  var info = Sheets.Spreadsheets.get(CONFIG.ID_DOCUMENTO_2, {
+    ranges: [pestana + '1:' + encabezado, pestana + modelo + ':' + modelo],
+    includeGridData: true,
+    fields: 'sheets(properties(title,gridProperties),merges,conditionalFormats,data(rowData(values(' +
+      'userEnteredValue,userEnteredFormat,dataValidation,note)),rowMetadata(pixelSize,hiddenByUser),' +
+      'columnMetadata(pixelSize,hiddenByUser)))'
+  });
+  var origen = info.sheets && info.sheets[0];
   if (!origen) throw new Error('Document 2 no tiene la pestaña "' + CONFIG.PESTANA_CONCENTRADO + '".');
+  var cuadricula = origen.properties.gridProperties;
+  if (modelo > cuadricula.rowCount) {
+    throw new Error('La fila modelo ' + modelo + ' no existe en Concentrado (tiene ' + cuadricula.rowCount + ' filas).');
+  }
+  var titulos = origen.data[0];
+  var filaModelo = origen.data[1];
+  var convertirValidacion = validacionSinRangos_();
 
-  var plantilla = SpreadsheetApp.create('Corte (plantilla) - no editar');
+  var plantilla = SpreadsheetApp.create('Corte (plantilla) - no editar', encabezado + 1, cuadricula.columnCount);
   try {
-    var idHojaInicial = plantilla.getSheets()[0].getSheetId();
-    var copia = copiarConcentrado_(plantilla.getId(), origen.properties.sheetId);
-    var idRaw = copia.sheetId;
-    var filas = copia.gridProperties.rowCount;
-    var encabezado = CONFIG.FILAS_ENCABEZADO;
-    var modelo = CONFIG.FILA_MODELO_CONCENTRADO;
-    if (modelo > filas) throw new Error('La fila modelo ' + modelo + ' no existe en Concentrado (tiene ' + filas + ' filas).');
-
-    var filasDe = function (desde, hasta) {  // filas desde..hasta (1 = primera), en índices de la API
-      return { range: { sheetId: idRaw, dimension: 'ROWS', startIndex: desde - 1, endIndex: hasta } };
-    };
-    var pedidos = [];
-    if (origen.basicFilter) pedidos.push({ clearBasicFilter: { sheetId: idRaw } });
-    if (filas > modelo) pedidos.push({ deleteDimension: filasDe(modelo + 1, filas) });
-    if (modelo - 1 > encabezado) pedidos.push({ deleteDimension: filasDe(encabezado + 1, modelo - 1) });
-    pedidos.push(
-      // Fila modelo (ahora justo debajo de los títulos): sin valores ni notas, conserva formato y listas.
-      { updateCells: { range: { sheetId: idRaw, startRowIndex: encabezado, endRowIndex: encabezado + 1 },
-        fields: 'userEnteredValue,note' } },
-      { updateSheetProperties: { properties: { sheetId: idRaw, title: CONFIG.PESTANA_RAW }, fields: 'title' } },
-      { duplicateSheet: { sourceSheetId: idRaw, insertSheetIndex: 1, newSheetName: CONFIG.PESTANA_TO_CONCENTRADO } },
-      { deleteSheet: { sheetId: idHojaInicial } });
+    var idRaw = plantilla.getSheets()[0].getSheetId();
+    var pedidos = [
+      { updateSheetProperties: { properties: { sheetId: idRaw, title: CONFIG.PESTANA_RAW, gridProperties: {
+        frozenRowCount: Math.min(cuadricula.frozenRowCount || 0, encabezado),
+        frozenColumnCount: cuadricula.frozenColumnCount || 0 } },
+        fields: 'title,gridProperties.frozenRowCount,gridProperties.frozenColumnCount' } },
+      { updateCells: { start: { sheetId: idRaw, rowIndex: 0, columnIndex: 0 },
+        rows: filasParaPlantilla(titulos.rowData, true, convertirValidacion),
+        fields: 'userEnteredValue,userEnteredFormat,dataValidation,note' } },
+      { updateCells: { start: { sheetId: idRaw, rowIndex: encabezado, columnIndex: 0 },
+        rows: filasParaPlantilla(filaModelo.rowData, false, convertirValidacion),
+        fields: 'userEnteredFormat,dataValidation' } }
+    ].concat(
+      dimensionesParaPlantilla(titulos.columnMetadata, 'COLUMNS', idRaw, 0),
+      dimensionesParaPlantilla(titulos.rowMetadata, 'ROWS', idRaw, 0),
+      dimensionesParaPlantilla(filaModelo.rowMetadata, 'ROWS', idRaw, encabezado),
+      combinadasParaPlantilla(origen.merges, encabezado, idRaw));
     Sheets.Spreadsheets.batchUpdate({ requests: pedidos }, plantilla.getId());
+
+    // Aparte: si alguna regla de formato condicional no se puede copiar, la plantilla sirve igual.
+    var reglas = reglasCondicionalesParaPlantilla(origen.conditionalFormats, modelo, encabezado, idRaw);
+    if (reglas.length) {
+      try {
+        Sheets.Spreadsheets.batchUpdate({ requests: reglas }, plantilla.getId());
+        Logger.log('Formato condicional: ' + reglas.length + ' regla(s) copiada(s).');
+      } catch (e) {
+        Logger.log('No se pudo copiar el formato condicional (' + e.message + '); la plantilla queda sin él.');
+      }
+    }
+
+    Sheets.Spreadsheets.batchUpdate({ requests: [{ duplicateSheet: {
+      sourceSheetId: idRaw, insertSheetIndex: 1, newSheetName: CONFIG.PESTANA_TO_CONCENTRADO } }] }, plantilla.getId());
   } catch (e) {
     DriveApp.getFileById(plantilla.getId()).setTrashed(true);  // no dejar una plantilla a medias
     throw e;
@@ -386,28 +439,8 @@ function crearPlantilla() {
   Logger.log('Cada usuario recibirá un Corte nuevo con este formato en su siguiente corte.');
 }
 
-// Concentrado es tan pesado que Google a veces contesta "Internal error" al copiarlo: hasta 3 intentos, con espera.
-function copiarConcentrado_(idDestino, idHoja) {
-  var esperas = [0, 20, 40];  // segundos antes de cada intento
-  for (var intento = 0; ; intento++) {
-    if (esperas[intento]) {
-      Logger.log('Google no pudo copiar Concentrado; intento ' + (intento + 1) + ' de ' + esperas.length +
-        ' en ' + esperas[intento] + ' s.');
-      Utilities.sleep(esperas[intento] * 1000);
-    }
-    try {
-      return Sheets.Spreadsheets.Sheets.copyTo({ destinationSpreadsheetId: idDestino }, CONFIG.ID_DOCUMENTO_2, idHoja);
-    } catch (e) {
-      if (intento === esperas.length - 1) {
-        throw new Error('Google no pudo copiar Concentrado después de ' + esperas.length + ' intentos (' + e.message +
-          '). Prueba más tarde, o edita a mano la plantilla actual y ejecuta publicarCambiosDePlantilla.');
-      }
-    }
-  }
-}
-
-// PLAN B (si crearPlantilla no logra copiar Concentrado): edita a mano la plantilla actual (por ejemplo, agrega una
-// letra a la lista desplegable de la columna B en Raw y ToConcentrado) y ejecuta esta función. Hace una copia de la
+// Cambios a mano en la plantilla actual (por ejemplo, agregar una letra a la lista desplegable de la columna B en
+// Raw y ToConcentrado): hacerlos y luego ejecutar esta función. Hace una copia de la
 // plantilla y la app pasa a usar esa copia, así cada usuario recibe un Corte nuevo con los cambios en su siguiente corte.
 function publicarCambiosDePlantilla() {
   var actual = idPlantilla_();

@@ -320,4 +320,52 @@ prueba('letras de la columna B que no están en la lista desplegable', () => {
   assert.deepStrictEqual(L.letrasFueraDeLista(['RA2', 'E'], lista), { filas: [], letras: [] });
 });
 
+prueba('plantilla: títulos con valores; fila modelo solo con formato y listas', () => {
+  const lista = { condition: { type: 'ONE_OF_LIST', values: [{ userEnteredValue: 'M' }] }, strict: true, showCustomUi: true };
+  const rowData = [{ values: [
+    { userEnteredValue: { stringValue: 'Correo1' }, userEnteredFormat: { textFormat: { bold: true } }, note: 'n' },
+    {}
+  ] }];
+  assert.deepStrictEqual(L.filasParaPlantilla(rowData, true), [{ values: [
+    { userEnteredValue: { stringValue: 'Correo1' }, note: 'n', userEnteredFormat: { textFormat: { bold: true } } }, {}] }]);
+  const modelo = [{ values: [{ userEnteredValue: { stringValue: 'E' }, note: 'x', userEnteredFormat: { a: 1 }, dataValidation: lista }] }];
+  assert.deepStrictEqual(L.filasParaPlantilla(modelo, false), [{ values: [{ userEnteredFormat: { a: 1 }, dataValidation: lista }] }]);
+  // La conversión de validaciones se aplica; undefined = sin validación.
+  assert.deepStrictEqual(L.filasParaPlantilla(modelo, false, () => undefined), [{ values: [{ userEnteredFormat: { a: 1 } }] }]);
+});
+
+prueba('plantilla: anchos/altos y ocultas', () => {
+  const r = L.dimensionesParaPlantilla([{ pixelSize: 120 }, {}, { pixelSize: 21, hiddenByUser: true }], 'ROWS', 7, 2);
+  assert.deepStrictEqual(r, [
+    { updateDimensionProperties: { range: { sheetId: 7, dimension: 'ROWS', startIndex: 2, endIndex: 3 },
+      properties: { pixelSize: 120 }, fields: 'pixelSize' } },
+    { updateDimensionProperties: { range: { sheetId: 7, dimension: 'ROWS', startIndex: 4, endIndex: 5 },
+      properties: { pixelSize: 21, hiddenByUser: true }, fields: 'pixelSize,hiddenByUser' } }]);
+});
+
+prueba('plantilla: formato condicional solo de la fila modelo, hasta el final de la hoja', () => {
+  const regla = (ranges) => ({ ranges, booleanRule: { condition: { type: 'TEXT_EQ' }, format: {} } });
+  const reglas = [
+    regla([{ sheetId: 1, startRowIndex: 2, endRowIndex: 60000, startColumnIndex: 4, endColumnIndex: 5 }]), // E3:E60000
+    regla([{ sheetId: 1, startColumnIndex: 6, endColumnIndex: 7 }]),                                     // G (toda)
+    regla([{ sheetId: 1, startRowIndex: 0, endRowIndex: 2 }]),                                           // solo títulos
+    regla([{ sheetId: 1, startRowIndex: 40000, startColumnIndex: 10, endColumnIndex: 11 }])              // K40001 en adelante
+  ];
+  const r = L.reglasCondicionalesParaPlantilla(reglas, 51362, 2, 9);
+  assert.deepStrictEqual(r.map((p) => p.addConditionalFormatRule.rule.ranges), [
+    [{ sheetId: 9, startRowIndex: 2, startColumnIndex: 4, endColumnIndex: 5 }],
+    [{ sheetId: 9, startRowIndex: 0, startColumnIndex: 6, endColumnIndex: 7 }],
+    [{ sheetId: 9, startRowIndex: 2, startColumnIndex: 10, endColumnIndex: 11 }]
+  ]);
+  assert.deepStrictEqual(r.map((p) => p.addConditionalFormatRule.index), [0, 1, 2]);
+});
+
+prueba('plantilla: solo las celdas combinadas de los títulos', () => {
+  const r = L.combinadasParaPlantilla([
+    { sheetId: 1, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 3 },
+    { sheetId: 1, startRowIndex: 5, endRowIndex: 7, startColumnIndex: 0, endColumnIndex: 1 }], 2, 9);
+  assert.deepStrictEqual(r, [{ mergeCells: { mergeType: 'MERGE_ALL',
+    range: { sheetId: 9, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 3 } } }]);
+});
+
 console.log(`\n${pruebas} pruebas OK`);

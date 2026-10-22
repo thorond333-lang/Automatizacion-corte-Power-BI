@@ -61,8 +61,9 @@ Guarda con **Ctrl + S**. En **Servicios** (barra izquierda) deben aparecer **Dri
 5. **Compartir** → en *Acceso general* elige **Cualquier persona que tenga el vínculo** como **Lector**. Así cualquier
    cuenta (personal o del trabajo) puede hacer su copia. La plantilla no tiene datos.
 
-> Para copiar el formato exacto, la función copia Concentrado completo y luego borra las filas de datos. El historial de
-> versiones de la plantilla conserva ese momento: solo lo ve quien puede **editar** la plantilla (tú), no los lectores.
+> La función lee de Concentrado **solo** las filas de títulos y la fila modelo (con la API de Sheets): valores de los títulos,
+> formato, listas desplegables, casillas, anchos de columna y formato condicional. No copia datos de pacientes. Las listas
+> desplegables salen **sin colores** (la API de Google no los da); al pegar en Concentrado toman los colores de allá.
 
 ## 5b. Hoja de asignaciones (columna B)
 
@@ -121,7 +122,7 @@ Pega los archivos nuevos → **Implementar** → **Administrar implementaciones*
    anterior se queda en su Drive como **"Corte (formato anterior)"** (se puede borrar) y su Bitácora pasa al nuevo.
    ToRawDaniNew no cambia.
 
-Si **crearPlantilla** falla porque Google no logra copiar Concentrado (es muy pesado; ya reintenta sola 3 veces), hay un
-**plan B**: edita a mano la plantilla actual ("Corte (plantilla) - no editar"), por ejemplo agrega la letra nueva a la lista
-desplegable de la columna B en **Raw** y en **ToConcentrado**, y ejecuta **publicarCambiosDePlantilla**. La app pasa a usar
-una copia de la plantilla editada y cada usuario recibe un Corte nuevo con esos cambios en su siguiente corte.
+**Cambios a mano en la plantilla:** también puedes editar la plantilla actual ("Corte (plantilla) - no editar"), por
+ejemplo agregar una letra a la lista desplegable de la columna B en **Raw** y en **ToConcentrado**, y luego ejecutar
+**publicarCambiosDePlantilla**. La app pasa a usar una copia de la plantilla editada y cada usuario recibe un Corte nuevo con
+esos cambios en su siguiente corte.

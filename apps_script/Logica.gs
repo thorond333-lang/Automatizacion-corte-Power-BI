@@ -417,6 +417,81 @@ function rangoDatosSalida(primeraFila, filas) {
   return COLUMNA_INICIAL_SALIDA + primeraFila + ':' + COLUMNA_FINAL_SALIDA + (primeraFila + filas - 1);
 }
 
+// ---------- Plantilla (crearPlantilla) ----------
+// crearPlantilla lee de Concentrado solo las filas de títulos y la fila modelo (con la API de Sheets) y arma la
+// plantilla con estas funciones: copiar la pestaña completa es demasiado pesado para Google ("Internal error").
+
+function soloDefinidos_(objeto) {
+  var resultado = {};
+  Object.keys(objeto).forEach(function (k) {
+    if (objeto[k] !== undefined && objeto[k] !== null) resultado[k] = objeto[k];
+  });
+  return resultado;
+}
+
+// Filas de la API (rowData) -> filas para updateCells. conValores=false: solo formato y listas desplegables/casillas.
+// `convertirValidacion` (opcional) transforma cada validación; si devuelve undefined, la celda queda sin validación.
+function filasParaPlantilla(rowData, conValores, convertirValidacion) {
+  return (rowData || []).map(function (fila) {
+    return {
+      values: (fila.values || []).map(function (c) {
+        var validacion = c.dataValidation && convertirValidacion ? convertirValidacion(c.dataValidation) : c.dataValidation;
+        return soloDefinidos_({
+          userEnteredValue: conValores ? c.userEnteredValue : undefined,
+          note: conValores ? c.note : undefined,
+          userEnteredFormat: c.userEnteredFormat,
+          dataValidation: validacion
+        });
+      })
+    };
+  });
+}
+
+// Alto/ancho y ocultas (rowMetadata o columnMetadata) -> pedidos updateDimensionProperties, desde el índice `desde`.
+function dimensionesParaPlantilla(metadatos, dimension, idHoja, desde) {
+  var pedidos = [];
+  (metadatos || []).forEach(function (m, i) {
+    var propiedades = soloDefinidos_({ pixelSize: m.pixelSize, hiddenByUser: m.hiddenByUser });
+    var campos = Object.keys(propiedades);
+    if (!campos.length) return;
+    pedidos.push({ updateDimensionProperties: {
+      range: { sheetId: idHoja, dimension: dimension, startIndex: desde + i, endIndex: desde + i + 1 },
+      properties: propiedades, fields: campos.join(',') } });
+  });
+  return pedidos;
+}
+
+// Reglas de formato condicional de Concentrado -> pedidos addConditionalFormatRule para la hoja `idHoja`.
+// Solo las que aplican a la fila modelo. Cada rango conserva sus columnas y llega hasta el final de la hoja (así las
+// filas que se agregan en cada corte también las tienen). Empieza donde empezaba si era en los títulos o justo debajo
+// (las fórmulas relativas siguen apuntando a su fila); si empezaba más abajo, empieza debajo de los títulos.
+function reglasCondicionalesParaPlantilla(reglas, filaModelo, filasEncabezado, idHoja) {
+  var indiceModelo = filaModelo - 1;
+  var pedidos = [];
+  (reglas || []).forEach(function (regla) {
+    var rangos = (regla.ranges || []).filter(function (r) {
+      return (r.startRowIndex || 0) <= indiceModelo && (r.endRowIndex === undefined || r.endRowIndex > indiceModelo);
+    }).map(function (r) {
+      var inicio = r.startRowIndex || 0;
+      return soloDefinidos_({ sheetId: idHoja, startRowIndex: inicio <= filasEncabezado ? inicio : filasEncabezado,
+        startColumnIndex: r.startColumnIndex, endColumnIndex: r.endColumnIndex });
+    });
+    if (!rangos.length) return;
+    pedidos.push({ addConditionalFormatRule: { index: pedidos.length,
+      rule: soloDefinidos_({ ranges: rangos, booleanRule: regla.booleanRule, gradientRule: regla.gradientRule }) } });
+  });
+  return pedidos;
+}
+
+// Celdas combinadas dentro de las filas de títulos -> pedidos mergeCells.
+function combinadasParaPlantilla(merges, filasEncabezado, idHoja) {
+  return (merges || []).filter(function (m) { return (m.endRowIndex || 0) <= filasEncabezado; }).map(function (m) {
+    return { mergeCells: { mergeType: 'MERGE_ALL', range: soloDefinidos_({ sheetId: idHoja,
+      startRowIndex: m.startRowIndex, endRowIndex: m.endRowIndex, startColumnIndex: m.startColumnIndex,
+      endColumnIndex: m.endColumnIndex }) } };
+  });
+}
+
 var TITULOS_COMPARACION = ['Fila del Excel', 'Email (comparado)', 'Teléfono (últimos 10)', 'Resultado',
   'Fila en Concentrado (email)', 'Fila en Concentrado (teléfono)', 'Asignado (B)'];
 
@@ -469,6 +544,8 @@ if (typeof module !== 'undefined') {
     clavesTelefonoDeCelda: clavesTelefonoDeCelda, indiceConcentrado: indiceConcentrado,
     estaEnConcentrado: estaEnConcentrado, buscarEnConcentrado: buscarEnConcentrado, prepararFilas: prepararFilas, formatearFila: formatearFila,
     filasAMatriz: filasAMatriz, circuloDePerfil: circuloDePerfil,
-    listasDeAsignacion: listasDeAsignacion, letrasFueraDeLista: letrasFueraDeLista, limpiezaToRaw: limpiezaToRaw, rangoDatosSalida: rangoDatosSalida, pesosDeLista: pesosDeLista, repartirCupos: repartirCupos, asignarGrupo: asignarGrupo, asignarLetras: asignarLetras, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
+    listasDeAsignacion: listasDeAsignacion, filasParaPlantilla: filasParaPlantilla,
+    dimensionesParaPlantilla: dimensionesParaPlantilla, reglasCondicionalesParaPlantilla: reglasCondicionalesParaPlantilla,
+    combinadasParaPlantilla: combinadasParaPlantilla, letrasFueraDeLista: letrasFueraDeLista, limpiezaToRaw: limpiezaToRaw, rangoDatosSalida: rangoDatosSalida, pesosDeLista: pesosDeLista, repartirCupos: repartirCupos, asignarGrupo: asignarGrupo, asignarLetras: asignarLetras, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
   };
 }
