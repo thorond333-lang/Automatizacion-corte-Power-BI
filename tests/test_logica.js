@@ -313,4 +313,11 @@ prueba('rango para seleccionar ToConcentrado: B a L de las filas con datos', () 
   assert.strictEqual(L.rangoDatosSalida(3, 0), '');
 });
 
+prueba('letras de la columna B que no están en la lista desplegable', () => {
+  const lista = ['DV:', 'AH:', 'F:', 'AR', 'AL2', 'LR2', 'RA2', 'U:', 'YI', 'NA', 'PENDIENTE', 'AT:', 'B:', 'T:', 'AB:', 'E'];
+  const r = L.letrasFueraDeLista(['RA2', 'M', 'AL2', '', 'M', 'X1 ', 'T:'], lista);
+  assert.deepStrictEqual(r, { filas: [1, 4, 5], letras: ['M', 'X1'] });
+  assert.deepStrictEqual(L.letrasFueraDeLista(['RA2', 'E'], lista), { filas: [], letras: [] });
+});
+
 console.log(`\n${pruebas} pruebas OK`);

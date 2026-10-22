@@ -77,3 +77,14 @@ vacías al final y **hasta la última fila cuya columna A tiene fecha y hora** (
 todo lo que esté debajo; si ninguna fila tiene fecha en A, no se corta nada). Las columnas vacías de en medio (por ejemplo `DescFertilidadMotivo`) **se quedan**, para que cada dato siga
 en la misma columna que en el Excel.
 El botón **ToRawDaniNew** de la página abre el archivo con todas las celdas con datos ya seleccionadas, listas para copiar.
+
+## Letras que no están en la lista desplegable de la columna B
+
+La columna B de ToConcentrado tiene la lista desplegable copiada de Concentrado, que **rechaza** lo que no está en ella
+(en el primer corte real faltaba `M` y el corte se detuvo). Ahora, en cada corte:
+
+1. La B recupera su validación original (la de la fila modelo de Raw, donde la B nunca se llena).
+2. Solo en las celdas cuya letra no está en la lista, la validación pasa a "mostrar advertencia" y la letra se escribe
+   igual (triángulo de advertencia, sin color). Las demás celdas conservan la lista y sus colores.
+3. La página avisa en rojo qué letras faltan. Para que salgan con color: agregarlas a la lista desplegable de la columna B
+   de ToConcentrado en el archivo Corte (y en la plantilla, para los usuarios nuevos).

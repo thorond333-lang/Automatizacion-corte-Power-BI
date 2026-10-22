@@ -59,7 +59,9 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
 
     var archivo = abrirCorteDelUsuario_(true);
     escribirPestana_(archivo, CONFIG.PESTANA_RAW, filasAMatriz(corte.raw));
-    var hojaTo = escribirPestana_(archivo, CONFIG.PESTANA_TO_CONCENTRADO, filasAMatriz(corte.toConcentrado));
+    var letrasFueraDeListaB = [];
+    var hojaTo = escribirPestana_(archivo, CONFIG.PESTANA_TO_CONCENTRADO, filasAMatriz(corte.toConcentrado),
+      letrasFueraDeListaB);
     hojaTo.hideColumns(1);  // se ve (y se copia) de la B en adelante
     var rangoTo = rangoDatosSalida(CONFIG.FILAS_ENCABEZADO + 1, corte.toConcentrado.length);
     var hojaComparacion = escribirComparacion_(archivo, corte.comparacion);
@@ -75,6 +77,7 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
       yaEnConcentrado: corte.yaEnConcentrado,
       aToConcentrado: corte.toConcentrado.length,
       asignaciones: corte.asignaciones,
+      letrasFueraDeListaB: letrasFueraDeListaB,
       filasConcentrado: concentrado.filas,
       tiempos: tiempos,
       segundos: segundosDesde_(inicio),
@@ -183,7 +186,8 @@ function leerConcentrado_() {
 
 // Reemplaza los datos de una pestaña. Los formatos no se tocan: cada fila nueva copia el formato y las
 // listas desplegables de la primera fila de datos (la "fila modelo" que viene de Concentrado).
-function escribirPestana_(archivo, nombre, matriz) {
+// Con `letrasFueraDeListaB` (un arreglo), revisa la lista desplegable de la columna B y deja ahí las letras que no tiene.
+function escribirPestana_(archivo, nombre, matriz, letrasFueraDeListaB) {
   var hoja = archivo.getSheetByName(nombre);
   if (!hoja) throw new Error('Tu archivo Corte no tiene la pestaña "' + nombre + '".');
   var inicio = CONFIG.FILAS_ENCABEZADO + 1;
@@ -204,12 +208,50 @@ function escribirPestana_(archivo, nombre, matriz) {
     modelo.copyTo(nuevas, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
   }
 
+  if (letrasFueraDeListaB) {
+    Array.prototype.push.apply(letrasFueraDeListaB, permitirLetrasFueraDeLista_(archivo, hoja, inicio, matriz));
+  }
   if (matriz.length) {
     hoja.getRange(inicio, letraANumero(COLUMNA_INICIAL_SALIDA), matriz.length, matriz[0].length)
       .setValues(matriz);
   }
   hoja.getRange(CONFIG.FILAS_ENCABEZADO, 1, Math.max(matriz.length, 1) + 1, columnas).createFilter();
   return hoja;
+}
+
+// La lista desplegable de la columna B (copiada de Concentrado) RECHAZA las letras que no tiene, y eso detendría el
+// corte. Primero la B recupera su validación original (la de la fila modelo de Raw, donde la B nunca se llena, así
+// que nunca se modifica); luego, solo en las celdas cuya letra no está en la lista, la validación pasa a "mostrar
+// advertencia" para que se pueda escribir. Las demás celdas conservan la lista y sus colores.
+// Devuelve las letras que no estaban en la lista.
+function permitirLetrasFueraDeLista_(archivo, hoja, inicio, matriz) {
+  if (!matriz.length) return [];
+  var columnaB = letraANumero(COLUMNA_INICIAL_SALIDA);  // la matriz empieza en la B
+  var celdasB = hoja.getRange(inicio, columnaB, matriz.length, 1);
+  var raw = archivo.getSheetByName(CONFIG.PESTANA_RAW);
+  if (raw) raw.getRange(inicio, columnaB).copyTo(celdasB, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
+
+  var regla = hoja.getRange(inicio, columnaB).getDataValidation();
+  if (!regla || regla.getAllowInvalid()) return [];
+  var permitidas = valoresPermitidos_(regla);
+  if (!permitidas) return [];
+  var fuera = letrasFueraDeLista(matriz.map(function (fila) { return fila[0]; }), permitidas);
+  if (fuera.filas.length) {
+    var conAdvertencia = regla.copy().setAllowInvalid(true).build();
+    fuera.filas.forEach(function (i) { hoja.getRange(inicio + i, columnaB).setDataValidation(conAdvertencia); });
+  }
+  return fuera.letras;
+}
+
+// Valores de una lista desplegable (lista escrita o lista desde un rango); null si la regla es de otro tipo.
+function valoresPermitidos_(regla) {
+  var criterio = regla.getCriteriaValues();
+  var tipo = regla.getCriteriaType();
+  if (tipo === SpreadsheetApp.DataValidationCriteria.VALUE_IN_LIST) return criterio[0].map(String);
+  if (tipo === SpreadsheetApp.DataValidationCriteria.VALUE_IN_RANGE) {
+    return [].concat.apply([], criterio[0].getDisplayValues());
+  }
+  return null;
 }
 
 // Listas de asignación de la hoja compartida (ID_HOJA_ASIGNACIONES). Si no se puede leer, las de respaldo de Config

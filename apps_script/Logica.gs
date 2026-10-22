@@ -358,6 +358,20 @@ function listasDeAsignacion(columnas, respaldo) {
   return { listas: listas, fuente: fuente, avisos: avisos };
 }
 
+// Letras de la columna B que la lista desplegable no tiene. `letrasB` = valor de B de cada fila (en orden),
+// `permitidas` = valores de la lista. Devuelve {filas: [índice de cada fila con letra fuera de la lista], letras: [únicas]}.
+function letrasFueraDeLista(letrasB, permitidas) {
+  var lista = new Set((permitidas || []).map(texto_));
+  var resultado = { filas: [], letras: [] };
+  (letrasB || []).forEach(function (letra, i) {
+    var l = texto_(letra);
+    if (!l || lista.has(l)) return;
+    resultado.filas.push(i);
+    if (resultado.letras.indexOf(l) < 0) resultado.letras.push(l);
+  });
+  return resultado;
+}
+
 // ---------- ToRawDaniNew ----------
 // Valores de la hoja del Excel -> qué borrar para dejar una copia exacta sin títulos ni filas vacías:
 // la fila 1, cada fila totalmente vacía, todo lo que está debajo de la última fila cuya columna A es una fecha
@@ -455,6 +469,6 @@ if (typeof module !== 'undefined') {
     clavesTelefonoDeCelda: clavesTelefonoDeCelda, indiceConcentrado: indiceConcentrado,
     estaEnConcentrado: estaEnConcentrado, buscarEnConcentrado: buscarEnConcentrado, prepararFilas: prepararFilas, formatearFila: formatearFila,
     filasAMatriz: filasAMatriz, circuloDePerfil: circuloDePerfil,
-    listasDeAsignacion: listasDeAsignacion, limpiezaToRaw: limpiezaToRaw, rangoDatosSalida: rangoDatosSalida, pesosDeLista: pesosDeLista, repartirCupos: repartirCupos, asignarGrupo: asignarGrupo, asignarLetras: asignarLetras, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
+    listasDeAsignacion: listasDeAsignacion, letrasFueraDeLista: letrasFueraDeLista, limpiezaToRaw: limpiezaToRaw, rangoDatosSalida: rangoDatosSalida, pesosDeLista: pesosDeLista, repartirCupos: repartirCupos, asignarGrupo: asignarGrupo, asignarLetras: asignarLetras, calcularCorte: calcularCorte, unaSolaLinea: unaSolaLinea
   };
 }

@@ -175,6 +175,14 @@
           });
           resultado.appendChild(tabla);
           mostrarAsignaciones(r.asignaciones);
+          if (r.letrasFueraDeListaB && r.letrasFueraDeListaB.length) {
+            var avisoB = document.createElement('div');
+            avisoB.className = 'error aviso';
+            avisoB.textContent = '⚠ No están en la lista desplegable de la columna B: ' + r.letrasFueraDeListaB.join(', ') +
+              '. Se escribieron igual (con un triángulo de advertencia y sin color). Para que salgan con su color, ' +
+              'agrégalas a la lista desplegable de la columna B de ToConcentrado en tu archivo Corte.';
+            resultado.insertBefore(avisoB, resultado.firstChild);
+          }
           var detalle = document.createElement('div');
           detalle.className = 'suave';
           detalle.textContent = 'Excel ' + r.tiempos.excel + ' s · Concentrado (' + r.filasConcentrado +
