@@ -120,3 +120,8 @@ Pega los archivos nuevos → **Implementar** → **Administrar implementaciones*
 4. Nadie tiene que hacer nada más: en su siguiente corte, cada usuario recibe un **Corte** nuevo con el formato nuevo. El
    anterior se queda en su Drive como **"Corte (formato anterior)"** (se puede borrar) y su Bitácora pasa al nuevo.
    ToRawDaniNew no cambia.
+
+Si **crearPlantilla** falla porque Google no logra copiar Concentrado (es muy pesado; ya reintenta sola 3 veces), hay un
+**plan B**: edita a mano la plantilla actual ("Corte (plantilla) - no editar"), por ejemplo agrega la letra nueva a la lista
+desplegable de la columna B en **Raw** y en **ToConcentrado**, y ejecuta **publicarCambiosDePlantilla**. La app pasa a usar
+una copia de la plantilla editada y cada usuario recibe un Corte nuevo con esos cambios en su siguiente corte.

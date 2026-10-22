@@ -348,8 +348,7 @@ function crearPlantilla() {
   var plantilla = SpreadsheetApp.create('Corte (plantilla) - no editar');
   try {
     var idHojaInicial = plantilla.getSheets()[0].getSheetId();
-    var copia = Sheets.Spreadsheets.Sheets.copyTo({ destinationSpreadsheetId: plantilla.getId() },
-      CONFIG.ID_DOCUMENTO_2, origen.properties.sheetId);
+    var copia = copiarConcentrado_(plantilla.getId(), origen.properties.sheetId);
     var idRaw = copia.sheetId;
     var filas = copia.gridProperties.rowCount;
     var encabezado = CONFIG.FILAS_ENCABEZADO;
@@ -385,4 +384,44 @@ function crearPlantilla() {
     Logger.log('No se pudo compartir sola (' + e.message + '). Compártela a mano: cualquier persona con el vínculo, Lector.');
   }
   Logger.log('Cada usuario recibirá un Corte nuevo con este formato en su siguiente corte.');
+}
+
+// Concentrado es tan pesado que Google a veces contesta "Internal error" al copiarlo: hasta 3 intentos, con espera.
+function copiarConcentrado_(idDestino, idHoja) {
+  var esperas = [0, 20, 40];  // segundos antes de cada intento
+  for (var intento = 0; ; intento++) {
+    if (esperas[intento]) {
+      Logger.log('Google no pudo copiar Concentrado; intento ' + (intento + 1) + ' de ' + esperas.length +
+        ' en ' + esperas[intento] + ' s.');
+      Utilities.sleep(esperas[intento] * 1000);
+    }
+    try {
+      return Sheets.Spreadsheets.Sheets.copyTo({ destinationSpreadsheetId: idDestino }, CONFIG.ID_DOCUMENTO_2, idHoja);
+    } catch (e) {
+      if (intento === esperas.length - 1) {
+        throw new Error('Google no pudo copiar Concentrado después de ' + esperas.length + ' intentos (' + e.message +
+          '). Prueba más tarde, o edita a mano la plantilla actual y ejecuta publicarCambiosDePlantilla.');
+      }
+    }
+  }
+}
+
+// PLAN B (si crearPlantilla no logra copiar Concentrado): edita a mano la plantilla actual (por ejemplo, agrega una
+// letra a la lista desplegable de la columna B en Raw y ToConcentrado) y ejecuta esta función. Hace una copia de la
+// plantilla y la app pasa a usar esa copia, así cada usuario recibe un Corte nuevo con los cambios en su siguiente corte.
+function publicarCambiosDePlantilla() {
+  var actual = idPlantilla_();
+  if (!actual) throw new Error('Todavía no hay plantilla: ejecuta crearPlantilla.');
+  var archivoActual = DriveApp.getFileById(actual);
+  var copia = archivoActual.makeCopy('Corte (plantilla) - no editar');
+  archivoActual.setName('Corte (plantilla anterior) - se puede borrar');
+  PropertiesService.getScriptProperties().setProperty(PROPIEDAD_ID_PLANTILLA, copia.getId());
+  Logger.log('Plantilla publicada: ' + copia.getUrl());
+  try {
+    copia.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    Logger.log('Compartida: cualquier persona con el vínculo puede verla (no tiene datos).');
+  } catch (e) {
+    Logger.log('No se pudo compartir sola (' + e.message + '). Compártela a mano: cualquier persona con el vínculo, Lector.');
+  }
+  Logger.log('Cada usuario recibirá un Corte nuevo con estos cambios en su siguiente corte.');
 }
