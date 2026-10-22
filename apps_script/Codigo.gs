@@ -5,6 +5,7 @@
 var PROPIEDAD_ID_CORTE = 'ID_CORTE';          // propiedad de cada usuario: su archivo Corte
 var PROPIEDAD_ID_TORAW = 'ID_TORAW';          // propiedad de cada usuario: su archivo ToRawDaniNew
 var PROPIEDAD_ID_PLANTILLA = 'ID_PLANTILLA';  // propiedad del script (común a todos): la plantilla
+var PROPIEDAD_PLANTILLA_DEL_CORTE = 'PLANTILLA_DEL_CORTE';  // propiedad de cada usuario: de qué plantilla salió su Corte
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
@@ -309,18 +310,28 @@ function idPlantilla_() {
   return PropertiesService.getScriptProperties().getProperty(PROPIEDAD_ID_PLANTILLA);
 }
 
-// El archivo Corte del usuario. Si no tiene (o lo borró), con crear=true se le hace uno desde la plantilla.
+// El archivo Corte del usuario. Con crear=true: si no tiene (o lo borró) se le hace uno desde la plantilla, y si su
+// Corte salió de una plantilla anterior (se cambió la fila modelo y se volvió a ejecutar crearPlantilla), se le hace
+// uno nuevo con el formato nuevo: el anterior se queda en su Drive como "Corte (formato anterior)" y su Bitácora pasa
+// al nuevo.
 function abrirCorteDelUsuario_(crear) {
   var existente = abrirArchivoGuardado_(PROPIEDAD_ID_CORTE);
-  if (existente || !crear) return existente;
+  if (!crear) return existente;
   var propiedades = PropertiesService.getUserProperties();
   var plantilla = idPlantilla_();
+  if (existente && (!plantilla || propiedades.getProperty(PROPIEDAD_PLANTILLA_DEL_CORTE) === plantilla)) return existente;
   if (!plantilla) {
     throw new Error('La app todavía no tiene plantilla. Quien la administra debe ejecutar crearPlantilla() una vez.');
   }
-  var copia = DriveApp.getFileById(plantilla).makeCopy(CONFIG.NOMBRE_CORTE);
-  propiedades.setProperty(PROPIEDAD_ID_CORTE, copia.getId());
-  return SpreadsheetApp.openById(copia.getId());
+  var nuevo = SpreadsheetApp.openById(DriveApp.getFileById(plantilla).makeCopy(CONFIG.NOMBRE_CORTE).getId());
+  if (existente) {
+    var bitacora = existente.getSheetByName(CONFIG.PESTANA_BITACORA);
+    if (bitacora) bitacora.copyTo(nuevo).setName(CONFIG.PESTANA_BITACORA);
+    existente.rename(CONFIG.NOMBRE_CORTE + ' (formato anterior)');
+  }
+  propiedades.setProperty(PROPIEDAD_ID_CORTE, nuevo.getId());
+  propiedades.setProperty(PROPIEDAD_PLANTILLA_DEL_CORTE, plantilla);
+  return nuevo;
 }
 
 // UNA VEZ, desde el editor de Apps Script, por quien administra la app.
@@ -349,5 +360,11 @@ function crearPlantilla() {
 
   PropertiesService.getScriptProperties().setProperty(PROPIEDAD_ID_PLANTILLA, plantilla.getId());
   Logger.log('Plantilla creada: ' + plantilla.getUrl());
-  Logger.log('Compártela como "Lector" con quienes usarán la app.');
+  try {
+    DriveApp.getFileById(plantilla.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    Logger.log('Compartida: cualquier persona con el vínculo puede verla (no tiene datos).');
+  } catch (e) {
+    Logger.log('No se pudo compartir sola (' + e.message + '). Compártela a mano: cualquier persona con el vínculo, Lector.');
+  }
+  Logger.log('Cada usuario recibirá un Corte nuevo con este formato en su siguiente corte.');
 }

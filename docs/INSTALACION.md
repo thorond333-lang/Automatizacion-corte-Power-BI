@@ -114,8 +114,9 @@ Pega los archivos nuevos → **Implementar** → **Administrar implementaciones*
 ## Cambiar la fila modelo (formato) después
 
 1. Cambia `FILA_MODELO_CONCENTRADO` en `Config` y guarda.
-2. Ejecuta **crearPlantilla** otra vez: crea una plantilla nueva y la app empieza a usarla (la vieja se puede borrar).
-3. Comparte la plantilla nueva: **Cualquier persona que tenga el vínculo** · **Lector**.
-4. Publica una **Nueva versión**.
-5. Quien ya tenga un archivo **Corte** debe mandarlo a la papelera; en su siguiente corte la app le crea uno nuevo
-   con el formato nuevo (ToRawDaniNew no cambia).
+2. Ejecuta **crearPlantilla** otra vez: crea una plantilla nueva, la comparte por vínculo (Lector) y la app empieza a usarla.
+   La plantilla vieja se puede borrar.
+3. Publica una **Nueva versión**.
+4. Nadie tiene que hacer nada más: en su siguiente corte, cada usuario recibe un **Corte** nuevo con el formato nuevo. El
+   anterior se queda en su Drive como **"Corte (formato anterior)"** (se puede borrar) y su Bitácora pasa al nuevo.
+   ToRawDaniNew no cambia.
