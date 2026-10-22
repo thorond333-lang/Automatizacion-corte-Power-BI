@@ -334,29 +334,47 @@ function abrirCorteDelUsuario_(crear) {
   return nuevo;
 }
 
-// UNA VEZ, desde el editor de Apps Script, por quien administra la app.
+// UNA VEZ, desde el editor de Apps Script, por quien administra la app (y otra vez si cambia la fila modelo).
 // Crea la plantilla de Corte copiando la pestaña Concentrado (formatos, colores, listas desplegables,
 // casillas) y dejando solo los títulos y la fila modelo vacía. Cada usuario recibe una copia de ella.
+// Todo con la API de Sheets: SpreadsheetApp.openById tiene que cargar Document 2 completo y, como es tan pesado,
+// a veces falla con "No se puede cargar el documento". La API copia la pestaña del lado de Google sin cargarlo.
 function crearPlantilla() {
-  var origen = SpreadsheetApp.openById(CONFIG.ID_DOCUMENTO_2).getSheetByName(CONFIG.PESTANA_CONCENTRADO);
+  var info = Sheets.Spreadsheets.get(CONFIG.ID_DOCUMENTO_2,
+    { fields: 'sheets(properties(sheetId,title),basicFilter.range)' });
+  var origen = info.sheets.filter(function (h) { return h.properties.title === CONFIG.PESTANA_CONCENTRADO; })[0];
   if (!origen) throw new Error('Document 2 no tiene la pestaña "' + CONFIG.PESTANA_CONCENTRADO + '".');
+
   var plantilla = SpreadsheetApp.create('Corte (plantilla) - no editar');
-  var hojaInicial = plantilla.getSheets()[0];
+  try {
+    var idHojaInicial = plantilla.getSheets()[0].getSheetId();
+    var copia = Sheets.Spreadsheets.Sheets.copyTo({ destinationSpreadsheetId: plantilla.getId() },
+      CONFIG.ID_DOCUMENTO_2, origen.properties.sheetId);
+    var idRaw = copia.sheetId;
+    var filas = copia.gridProperties.rowCount;
+    var encabezado = CONFIG.FILAS_ENCABEZADO;
+    var modelo = CONFIG.FILA_MODELO_CONCENTRADO;
+    if (modelo > filas) throw new Error('La fila modelo ' + modelo + ' no existe en Concentrado (tiene ' + filas + ' filas).');
 
-  var raw = origen.copyTo(plantilla).setName(CONFIG.PESTANA_RAW);
-  var filtro = raw.getFilter();
-  if (filtro) filtro.remove();
-  var encabezado = CONFIG.FILAS_ENCABEZADO;
-  var modelo = CONFIG.FILA_MODELO_CONCENTRADO;
-  var maxFilas = raw.getMaxRows();
-  if (maxFilas > modelo) raw.deleteRows(modelo + 1, maxFilas - modelo);
-  if (modelo - 1 > encabezado) raw.deleteRows(encabezado + 1, modelo - 1 - encabezado);
-  var filaModelo = raw.getRange(encabezado + 1, 1, 1, raw.getMaxColumns());
-  filaModelo.clearContent();
-  filaModelo.clearNote();
-
-  raw.copyTo(plantilla).setName(CONFIG.PESTANA_TO_CONCENTRADO);
-  plantilla.deleteSheet(hojaInicial);
+    var filasDe = function (desde, hasta) {  // filas desde..hasta (1 = primera), en índices de la API
+      return { range: { sheetId: idRaw, dimension: 'ROWS', startIndex: desde - 1, endIndex: hasta } };
+    };
+    var pedidos = [];
+    if (origen.basicFilter) pedidos.push({ clearBasicFilter: { sheetId: idRaw } });
+    if (filas > modelo) pedidos.push({ deleteDimension: filasDe(modelo + 1, filas) });
+    if (modelo - 1 > encabezado) pedidos.push({ deleteDimension: filasDe(encabezado + 1, modelo - 1) });
+    pedidos.push(
+      // Fila modelo (ahora justo debajo de los títulos): sin valores ni notas, conserva formato y listas.
+      { updateCells: { range: { sheetId: idRaw, startRowIndex: encabezado, endRowIndex: encabezado + 1 },
+        fields: 'userEnteredValue,note' } },
+      { updateSheetProperties: { properties: { sheetId: idRaw, title: CONFIG.PESTANA_RAW }, fields: 'title' } },
+      { duplicateSheet: { sourceSheetId: idRaw, insertSheetIndex: 1, newSheetName: CONFIG.PESTANA_TO_CONCENTRADO } },
+      { deleteSheet: { sheetId: idHojaInicial } });
+    Sheets.Spreadsheets.batchUpdate({ requests: pedidos }, plantilla.getId());
+  } catch (e) {
+    DriveApp.getFileById(plantilla.getId()).setTrashed(true);  // no dejar una plantilla a medias
+    throw e;
+  }
 
   PropertiesService.getScriptProperties().setProperty(PROPIEDAD_ID_PLANTILLA, plantilla.getId());
   Logger.log('Plantilla creada: ' + plantilla.getUrl());
