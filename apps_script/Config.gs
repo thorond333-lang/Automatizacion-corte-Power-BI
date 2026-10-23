@@ -25,6 +25,10 @@ var CONFIG = {
   PESTANA_COMPARACION: 'Comparación',  // detalle de cada fila del Excel: encontrada o no, y en qué fila
   PESTANA_BITACORA: 'Bitácora',
 
+  // Correos de prueba: si la parte antes de la @ es exactamente una de estas (sin importar mayúsculas ni dominio),
+  // la fila no cuenta para el corte (no va a Raw ni a ToConcentrado). Ej.: prueba@gmail.com, test@hotmail.com.
+  CORREOS_DE_PRUEBA: ['prueba', 'test'],
+
   // Archivo (y pestaña) con la copia del Excel sin títulos; uno por usuario, se reemplaza en cada corte.
   NOMBRE_TORAW: 'ToRawDaniNew',
 

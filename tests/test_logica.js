@@ -368,4 +368,30 @@ prueba('plantilla: solo las celdas combinadas de los títulos', () => {
     range: { sheetId: 9, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 3 } } }]);
 });
 
+prueba('correos de prueba: solo prueba@ y test@ exactos, sin importar mayúsculas ni dominio', () => {
+  const n = ['prueba', 'test'];
+  ['prueba@gmail.com', 'TEST@hotmail.com', ' Prueba@empresa.mx '].forEach((e) => assert.ok(L.esCorreoDePrueba(e, n), e));
+  ['tester@gmail.com', 'prueba1@gmail.com', 'ana.test@gmail.com', 'mi@test.com', '', 'test'].forEach((e) =>
+    assert.ok(!L.esCorreoDePrueba(e, n), e));
+  assert.ok(!L.esCorreoDePrueba('prueba@gmail.com', []));
+});
+
+prueba('correos de prueba no cuentan: ni Raw, ni ToConcentrado, ni para duplicados', () => {
+  const excel = [
+    TITULOS,
+    fila({ Email: 'prueba@gmail.com', Phone: '+15550000001' }),   // 2: prueba
+    fila({ Email: 'real@x.com', Phone: '+15550000001' }),         // 3: mismo teléfono que la de prueba -> NO es duplicada
+    fila({ Email: 'Test@Hotmail.com', Phone: '' })                // 4: prueba
+  ];
+  const r = L.calcularCorte(excel, [], [], 3, undefined, ['prueba', 'test']);
+  assert.strictEqual(r.omitidasPrueba, 2);
+  assert.strictEqual(r.omitidasDuplicadas, 0);
+  assert.deepStrictEqual(r.raw.map((f) => f.D), ['real@x.com']);
+  assert.deepStrictEqual(r.toConcentrado.map((f) => f.D), ['real@x.com']);
+  assert.deepStrictEqual(r.comparacion.map((c) => c[3]), ['Omitida: correo de prueba', 'NUEVA -> ToConcentrado',
+    'Omitida: correo de prueba']);
+  // Sin lista, todo cuenta como antes.
+  assert.strictEqual(L.calcularCorte(excel, [], [], 3).raw.length, 2);
+});
+
 console.log(`\n${pruebas} pruebas OK`);

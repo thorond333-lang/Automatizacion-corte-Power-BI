@@ -88,3 +88,11 @@ La columna B de ToConcentrado tiene la lista desplegable copiada de Concentrado,
    igual (triángulo de advertencia, sin color). Las demás celdas conservan la lista y sus colores.
 3. La página avisa en rojo qué letras faltan. Para que salgan con color: agregarlas a la lista desplegable de la columna B
    de ToConcentrado en el archivo Corte (y en la plantilla, para los usuarios nuevos).
+
+## Correos de prueba
+
+Si la parte antes de la `@` del email es exactamente `prueba` o `test` (sin importar mayúsculas ni el dominio:
+`prueba@gmail.com`, `TEST@hotmail.com`), la fila **no cuenta para el corte**: no va a Raw ni a ToConcentrado, no se compara
+y tampoco hace que otra fila con el mismo teléfono cuente como duplicada. `tester@…`, `prueba1@…` o `ana.test@…` sí cuentan.
+La lista está en `Config.gs` → `CORREOS_DE_PRUEBA`. La página muestra cuántas se omitieron y la Comparación dice
+`Omitida: correo de prueba`. ToRawDaniNew no cambia (es copia exacta del Excel).

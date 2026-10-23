@@ -53,7 +53,7 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
 
     var asignacion = leerAsignaciones_();
     var corte = calcularCorte(valoresExcel, concentrado.emails, concentrado.telefonos, CONFIG.FILAS_ENCABEZADO + 1,
-      { listas: asignacion.listas, grupos: CONFIG.ASIGNACION.grupos });
+      { listas: asignacion.listas, grupos: CONFIG.ASIGNACION.grupos }, CONFIG.CORREOS_DE_PRUEBA);
     corte.asignaciones.listas = asignacion.listas;
     corte.asignaciones.fuente = asignacion.fuente;
     corte.asignaciones.avisos = asignacion.avisos;
@@ -73,6 +73,7 @@ function ejecutarCorte(base64, nombreArchivo, tipoArchivo) {
       archivo: nombreArchivo,
       totalExcel: corte.totalExcel,
       omitidasVacias: corte.omitidasVacias,
+      omitidasPrueba: corte.omitidasPrueba,
       omitidasDuplicadas: corte.omitidasDuplicadas,
       enRaw: corte.raw.length,
       yaEnConcentrado: corte.yaEnConcentrado,
@@ -325,13 +326,13 @@ function escribirComparacion_(archivo, filas) {
 function anotarBitacora_(archivo, r) {
   var hoja = archivo.getSheetByName(CONFIG.PESTANA_BITACORA) || archivo.insertSheet(CONFIG.PESTANA_BITACORA);
   var titulos = ['Fecha', 'Usuario', 'Archivo', 'Filas en Excel', 'Sin email ni teléfono', 'Duplicadas',
-    'En Raw', 'Ya en Concentrado', 'A ToConcentrado', 'Filas leídas de Concentrado', 'Segundos', 'Listas de asignación'];
+    'En Raw', 'Ya en Concentrado', 'A ToConcentrado', 'Filas leídas de Concentrado', 'Segundos', 'Listas de asignación', 'Correos de prueba'];
   hoja.getRange(1, 1, 1, titulos.length).setValues([titulos]);
   hoja.setFrozenRows(1);
   var avisos = (r.asignaciones && r.asignaciones.avisos) || [];
   hoja.appendRow([new Date(), Session.getActiveUser().getEmail(), r.archivo, r.totalExcel, r.omitidasVacias,
     r.omitidasDuplicadas, r.enRaw, r.yaEnConcentrado, r.aToConcentrado, r.filasConcentrado, r.segundos,
-    avisos.length ? 'RESPALDO: ' + avisos.join(' ') : 'Hoja']);
+    avisos.length ? 'RESPALDO: ' + avisos.join(' ') : 'Hoja', r.omitidasPrueba || 0]);
 }
 
 function idPlantilla_() {

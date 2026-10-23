@@ -111,16 +111,26 @@ function estaEnConcentrado(fila, indice) {
   return !!(b.filaEmail || b.filaTelefono);
 }
 
-// Valores del Excel (fila 1 = títulos) -> filas como objetos {título: valor}, sin filas vacías ni duplicadas.
+// Correo de prueba = la parte antes de la @ es exactamente una de `nombresDePrueba` ('prueba', 'test'), sin importar
+// mayúsculas ni el dominio: prueba@gmail.com, TEST@hotmail.com. 'tester@…' o 'prueba1@…' NO cuentan.
+function esCorreoDePrueba(email, nombresDePrueba) {
+  var clave = claveEmail(email);
+  if (!clave) return false;
+  var usuario = clave.slice(0, clave.lastIndexOf('@'));
+  return (nombresDePrueba || []).some(function (n) { return texto_(n).toLowerCase() === usuario; });
+}
+
+// Valores del Excel (fila 1 = títulos) -> filas como objetos {título: valor}, sin filas vacías, de prueba ni duplicadas.
 // Duplicada = mismo email o mismo teléfono que una fila anterior del mismo Excel (se queda la primera).
-function prepararFilas(valores) {
+// De prueba = su email es un correo de prueba (ver esCorreoDePrueba); no cuenta para nada, ni para los duplicados.
+function prepararFilas(valores, nombresDePrueba) {
   var titulos = (valores[0] || []).map(texto_);
   var iEmail = titulos.indexOf('Email');
   var iTelefono = titulos.indexOf('Phone');
   if (iEmail < 0) iEmail = letraANumero('E') - 1;
   if (iTelefono < 0) iTelefono = letraANumero('F') - 1;
 
-  var resultado = { filas: [], omitidas: [], totalExcel: 0, omitidasVacias: 0, omitidasDuplicadas: 0 };
+  var resultado = { filas: [], omitidas: [], totalExcel: 0, omitidasVacias: 0, omitidasPrueba: 0, omitidasDuplicadas: 0 };
   var emailsVistos = new Map();     // clave -> fila del Excel donde apareció primero
   var telefonosVistos = new Map();
   for (var r = 1; r < valores.length; r++) {
@@ -130,6 +140,12 @@ function prepararFilas(valores) {
     var email = claveEmail(crudo[iEmail]);
     var telefono = claveTelefono(crudo[iTelefono]);
     var filaExcel = r + 1;
+    if (esCorreoDePrueba(email, nombresDePrueba)) {
+      resultado.omitidasPrueba++;
+      resultado.omitidas.push({ filaExcel: filaExcel, claveEmail: email, claveTelefono: telefono,
+        motivo: 'Omitida: correo de prueba' });
+      continue;
+    }
     if (!email && !telefono) {
       resultado.omitidasVacias++;
       resultado.omitidas.push({ filaExcel: filaExcel, claveEmail: '', claveTelefono: '',
@@ -498,8 +514,10 @@ var TITULOS_COMPARACION = ['Fila del Excel', 'Email (comparado)', 'Teléfono (ú
 // Todo el corte sin Google: valores del Excel + columnas D y K de Concentrado -> lo que va a cada pestaña.
 // `primeraFilaConcentrado` = fila de la hoja del primer valor de esas columnas (para mostrar dónde se encontró).
 // `asignacion` = listas de letras y grupos (ver asignarLetras); solo se aplica a ToConcentrado.
-function calcularCorte(valoresExcel, emailsConcentrado, telefonosConcentrado, primeraFilaConcentrado, asignacion) {
-  var preparado = prepararFilas(valoresExcel);
+// `nombresDePrueba` = correos que no cuentan (ver esCorreoDePrueba).
+function calcularCorte(valoresExcel, emailsConcentrado, telefonosConcentrado, primeraFilaConcentrado, asignacion,
+  nombresDePrueba) {
+  var preparado = prepararFilas(valoresExcel, nombresDePrueba);
   var indice = indiceConcentrado(emailsConcentrado, telefonosConcentrado, primeraFilaConcentrado);
   var nuevas = [];
   var comparacion = [];
@@ -533,6 +551,7 @@ function calcularCorte(valoresExcel, emailsConcentrado, telefonosConcentrado, pr
     comparacion: comparacion,
     totalExcel: preparado.totalExcel,
     omitidasVacias: preparado.omitidasVacias,
+    omitidasPrueba: preparado.omitidasPrueba,
     omitidasDuplicadas: preparado.omitidasDuplicadas,
     yaEnConcentrado: preparado.filas.length - nuevas.length
   };
@@ -542,7 +561,7 @@ if (typeof module !== 'undefined') {
   module.exports = {
     letraANumero: letraANumero, claveEmail: claveEmail, claveTelefono: claveTelefono,
     clavesTelefonoDeCelda: clavesTelefonoDeCelda, indiceConcentrado: indiceConcentrado,
-    estaEnConcentrado: estaEnConcentrado, buscarEnConcentrado: buscarEnConcentrado, prepararFilas: prepararFilas, formatearFila: formatearFila,
+    estaEnConcentrado: estaEnConcentrado, esCorreoDePrueba: esCorreoDePrueba, buscarEnConcentrado: buscarEnConcentrado, prepararFilas: prepararFilas, formatearFila: formatearFila,
     filasAMatriz: filasAMatriz, circuloDePerfil: circuloDePerfil,
     listasDeAsignacion: listasDeAsignacion, filasParaPlantilla: filasParaPlantilla,
     dimensionesParaPlantilla: dimensionesParaPlantilla, reglasCondicionalesParaPlantilla: reglasCondicionalesParaPlantilla,
